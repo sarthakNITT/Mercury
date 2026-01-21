@@ -2,11 +2,13 @@
   "name": "lavapunk26",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
-    "dev": "turbo run dev",
-    "lint": "turbo run lint",
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "smoke": "bun run scripts/smoke-test.ts",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types",
     "prepare": "husky",
     "redis:up": "docker compose up -d redis",
     "redis:down": "docker compose down"
