@@ -903,8 +903,9 @@ const start = async () => {
     getRedis();
 
     await fastify.ready();
-    await fastify.listen({ port: 4000, host: "0.0.0.0" });
-    console.log(`Server listening on http://localhost:4000`);
+    const PORT = parseInt(process.env.PORT || "4009");
+    await fastify.listen({ port: PORT, host: "0.0.0.0" });
+    console.log(`Server listening on http://localhost:${PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

@@ -7,11 +7,11 @@ const PORT = parseInt(process.env.PORT || "4000");
 
 // Services map
 const SERVICES = {
-  catalog: "http://localhost:4001",
-  events: "http://localhost:4002",
-  reco: "http://localhost:4003",
-  risk: "http://localhost:4004",
-  payments: "http://localhost:4005",
+  catalog: process.env.CATALOG_URL || "http://localhost:4001",
+  events: process.env.EVENTS_URL || "http://localhost:4002",
+  reco: process.env.RECO_URL || "http://localhost:4003",
+  risk: process.env.RISK_URL || "http://localhost:4004",
+  payments: process.env.PAYMENTS_URL || "http://localhost:4005",
 };
 
 fastify.register(cors, { origin: true });
@@ -88,6 +88,8 @@ const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: "0.0.0.0" });
     console.log(`API Gateway running on port ${PORT}`);
+    console.log("Services Configured:");
+    console.table(SERVICES);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
