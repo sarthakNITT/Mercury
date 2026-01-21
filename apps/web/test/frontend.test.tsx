@@ -29,6 +29,7 @@ vi.mock("../lib/api", () => ({
     runDemoStory: vi.fn(),
     seed: vi.fn(),
     generateDemoEvents: vi.fn(),
+    getTrending: vi.fn().mockResolvedValue({ items: [] }),
   },
 }));
 
