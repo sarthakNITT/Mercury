@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, Metrics, Event } from "../../lib/api";
+import { api, Metrics, Event, TrendingItem } from "../../lib/api";
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [trending, setTrending] = useState<TrendingItem[]>([]);
   const [fraudEvents, setFraudEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -14,14 +15,16 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [m, e, f] = await Promise.all([
+      const [m, e, f, t] = await Promise.all([
         api.getMetrics(),
         api.getRecentEvents(),
         api.getFraudEvents(),
+        api.getTrending(5),
       ]);
       setMetrics(m);
       setEvents(e);
       setFraudEvents(f);
+      setTrending(t.items);
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
     } finally {
@@ -284,6 +287,41 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      <h2 className="title">Trending Now (24h)</h2>
+      <div className="grid" style={{ marginBottom: "2rem" }}>
+        {trending.map((item) => (
+          <div
+            key={item.product.id}
+            className="card"
+            style={{ padding: "1rem" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "0.5rem",
+              }}
+            >
+              <strong style={{ fontSize: "1.1rem" }}>
+                {item.product.name}
+              </strong>
+              <span
+                className="tag"
+                style={{ background: "#d29922", color: "white" }}
+              >
+                {item.score.toFixed(0)} pts
+              </span>
+            </div>
+            <div style={{ color: "#7ee787", fontWeight: "bold" }}>
+              {(item.product.price / 100).toFixed(2)} {item.product.currency}
+            </div>
+          </div>
+        ))}
+        {trending.length === 0 && (
+          <div style={{ color: "grey" }}>No trending data yet.</div>
+        )}
+      </div>
 
       <h2 className="title">Recent Activity (Live)</h2>
       <div className="card">

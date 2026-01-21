@@ -47,6 +47,11 @@ export interface RiskResult {
   reasons: string[];
 }
 
+export interface TrendingItem {
+  product: Product;
+  score: number;
+}
+
 export const api = {
   getProducts: async (): Promise<Product[]> => {
     const res = await fetch(`${API_URL}/products`);
@@ -114,6 +119,13 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, productId, amount }),
     });
+    return res.json();
+  },
+
+  getTrending: async (
+    limit: number = 10,
+  ): Promise<{ limit: number; items: TrendingItem[]; source: string }> => {
+    const res = await fetch(`${API_URL}/trending?limit=${limit}`);
     return res.json();
   },
 

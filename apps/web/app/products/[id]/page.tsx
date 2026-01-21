@@ -27,6 +27,7 @@ export default function ProductPage({
   // Unwrap params using React.use()
   const { id } = use(params);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [trendingScore, setTrendingScore] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -46,6 +47,15 @@ export default function ProductPage({
           .getRecommendations(id, userId)
           .then((res) => setRecommendations(res.recommendations))
           .catch(console.error);
+
+        // Check trending
+        api
+          .getTrending(20)
+          .then((res) => {
+            const hit = res.items.find((i) => i.product.id === id);
+            if (hit) setTrendingScore(hit.score);
+          })
+          .catch(() => {});
       })
       .catch((err) => {
         console.error(err);
@@ -137,6 +147,20 @@ export default function ProductPage({
             <p style={{ color: "#8b949e", fontSize: "1.2rem" }}>
               {product.category}
             </p>
+            {trendingScore && (
+              <div
+                className="tag"
+                style={{
+                  display: "inline-block",
+                  background: "linear-gradient(45deg, #f85149, #d29922)",
+                  color: "white",
+                  marginBottom: "0.5rem",
+                  fontWeight: "bold",
+                }}
+              >
+                🔥 Trending Score: {trendingScore}
+              </div>
+            )}
             <p className="price" style={{ fontSize: "2rem", margin: "1rem 0" }}>
               {(product.price / 100).toFixed(2)} {product.currency}
             </p>

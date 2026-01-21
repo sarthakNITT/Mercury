@@ -7,7 +7,9 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "prepare": "husky"
+    "prepare": "husky",
+    "redis:up": "docker compose up -d redis",
+    "redis:down": "docker compose down"
   },
   "devDependencies": {
     "husky": "^9.1.7",
