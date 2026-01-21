@@ -1,0 +1,50 @@
+// packages/db/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Int      // Stored in minor units
+  currency    String   @default("INR")
+  category    String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  events      Event[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  // Relations
+  events    Event[]
+}
+
+model Event {
+  id        String    @id @default(cuid())
+  userId    String
+  productId String
+  type      String
+  meta      Json?     // Changed from String to Json for Postgres
+  createdAt DateTime  @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([createdAt])
+  @@index([type])
+  @@index([userId])
+  @@index([productId])
+}
