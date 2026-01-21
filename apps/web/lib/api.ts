@@ -143,7 +143,10 @@ export const api = {
     return res.json();
   },
 
-  createCheckoutSession: async (userId: string, items: any[]): Promise<any> => {
+  createCheckoutSession: async (
+    userId: string,
+    items: { id: string; price: number; quantity: number; name?: string }[],
+  ): Promise<CheckoutResponse> => {
     const res = await fetch(`${API_URL}/checkout/create-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -152,3 +155,12 @@ export const api = {
     return res.json();
   },
 };
+
+export interface CheckoutResponse {
+  url?: string;
+  sessionId?: string;
+  riskScore?: number;
+  decision?: string;
+  error?: string;
+  reasons?: string[];
+}

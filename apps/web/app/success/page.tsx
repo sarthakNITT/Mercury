@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function SuccessPage({
   searchParams,
 }: {
@@ -18,12 +20,12 @@ export default function SuccessPage({
         <p className="mb-8 text-neutral-400">
           Your transaction has been securely processed.
         </p>
-        <a
+        <Link
           href="/"
           className="inline-block px-8 py-3 bg-green-500 text-black font-bold hover:bg-green-400 transition-colors uppercase tracking-widest"
         >
           Return to Market
-        </a>
+        </Link>
       </div>
     </div>
   );
