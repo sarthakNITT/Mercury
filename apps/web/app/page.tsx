@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, Product } from "../lib/api";
+import Image from "next/image";
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,9 +48,8 @@ export default function Home() {
             className="card"
           >
             <div className="card-img">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               {product.imageUrl ? (
-                <img
+                <Image
                   src={product.imageUrl}
                   alt={product.name}
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}

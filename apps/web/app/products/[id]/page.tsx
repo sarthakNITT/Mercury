@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { api, Product } from "../../../lib/api";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 function getUserId() {
   if (typeof window === "undefined") return "unknown-user";
@@ -75,9 +76,8 @@ export default function ProductPage({
       <div className="card" style={{ padding: "2rem" }}>
         <div style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
           <div className="card-img" style={{ height: "300px" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             {product.imageUrl ? (
-              <img
+              <Image
                 src={product.imageUrl}
                 alt={product.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
