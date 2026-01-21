@@ -1,0 +1,51 @@
+// apps/api/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Int // Stored in minor units (e.g. cents/paise)
+  currency    String   @default("INR")
+  category    String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  events Event[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  // Relations
+  events Event[]
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  type      String
+  meta      String? // JSON string for flexibility (SQLite doesn't support native JSON types as well as PG)
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([createdAt])
+  @@index([type])
+  @@index([userId])
+  @@index([productId])
+}

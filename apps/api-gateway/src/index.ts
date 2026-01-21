@@ -45,7 +45,7 @@ fastify.register(proxy, {
   http2: false,
   replyOptions: {
     // Essential for SSE
-    getUpstream: (req, base) => {
+    getUpstream: (req: any, base: any) => {
       if (req.url.includes("/stream")) {
         return base;
       }

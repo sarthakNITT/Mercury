@@ -1,50 +1,44 @@
 import Redis from "ioredis";
 
-// Global flag to track Redis availability
-export let redisAvailable = false;
+// Reuse existing connection if possible
+let redisClient: Redis | null = null;
+let isAvailable = false;
 
-let redis: Redis | null = null;
+const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
-export const getRedis = (url?: string): Redis => {
-  if (!redis) {
-    const redisUrl = url || process.env.REDIS_URL || "redis://localhost:6379";
-    redis = new Redis(redisUrl, {
-      lazyConnect: true,
-      retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-      maxRetriesPerRequest: 1,
-    });
+export const getRedis = (): Redis => {
+  if (redisClient) return redisClient;
 
-    redis.on("connect", () => {
-      console.log("Redis connected");
-      redisAvailable = true;
-    });
-
-    redis.on("error", (err) => {
-      if (redisAvailable) {
-        console.error("Redis connection lost:", err.message);
+  redisClient = new Redis(REDIS_URL, {
+    maxRetriesPerRequest: 1, // Fail fast for demo
+    retryStrategy(times) {
+      if (times > 3) {
+        console.warn("Redis retry limit reached. Redis is likely down.");
+        isAvailable = false;
+        return null;
       }
-      redisAvailable = false;
-    });
+      return Math.min(times * 50, 2000);
+    },
+    lazyConnect: true, // Don't crash on startup if unavailable
+  });
 
-    redis.on("close", () => {
-      if (redisAvailable) {
-        console.warn("Redis connection closed");
-      }
-      redisAvailable = false;
-    });
+  redisClient.on("connect", () => {
+    isAvailable = true;
+    console.log("Redis connected");
+  });
 
-    redis.connect().catch(() => {
-      console.warn(
-        "Initial Redis connection failed, running in fallback mode.",
-      );
-    });
-  }
-  return redis;
+  redisClient.on("error", (err) => {
+    isAvailable = false;
+    // Suppress unhandled error crash
+    // console.error("Redis error", err.message);
+  });
+
+  // Try connecting
+  redisClient.connect().catch(() => {
+    // Ignore initial connect error, retry strategy handles it
+  });
+
+  return redisClient;
 };
 
-export const isRedisAvailable = (): boolean => {
-  return redisAvailable;
-};
+export const isRedisAvailable = () => isAvailable;

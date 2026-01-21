@@ -330,7 +330,8 @@ fastify.get("/metrics/overview", async (request, reply) => {
   const fraudEvents = await prisma.event.findMany({
     where: {
       type: "PURCHASE",
-      meta: { contains: "riskScore" },
+      // meta: { contains: "riskScore" }, // Not supported in Json filter directly in this version
+      // Fetching all PURCHASES and filtering in memory below
     },
     take: 50,
     orderBy: { createdAt: "desc" },
@@ -353,7 +354,7 @@ fastify.get("/metrics/overview", async (request, reply) => {
   allPurchases.forEach((e) => {
     if (!e.meta) return;
     try {
-      const meta = JSON.parse(e.meta);
+      const meta = (e.meta as any) || {};
       if (meta.decision === "BLOCK") blockedCount++;
       if (meta.decision === "CHALLENGE") challengeCount++;
       if (meta.riskScore !== undefined) {
@@ -391,7 +392,7 @@ fastify.get("/events/fraud", async (request, reply) => {
   // Filter for non-ALLOW in memory
   const fraudEvents = events
     .map((e) => {
-      const meta = e.meta ? JSON.parse(e.meta) : {};
+      const meta = (e.meta as any) || {};
       return { ...e, meta };
     })
     .filter((e) => e.meta.decision && e.meta.decision !== "ALLOW");

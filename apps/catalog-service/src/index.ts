@@ -42,7 +42,8 @@ fastify.post("/seed/products", async (request, reply) => {
   const productsData = [];
 
   for (let i = 1; i <= count; i++) {
-    const category = categories[Math.floor(Math.random() * categories.length)];
+    const category =
+      categories[Math.floor(Math.random() * categories.length)] || "General";
     productsData.push({
       name: `${category} Product ${i}`,
       description: `Description for product ${i} in ${category}. Very high quality item.`,

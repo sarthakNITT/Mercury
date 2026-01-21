@@ -63,7 +63,7 @@ fastify.post("/events", async (request, reply) => {
       userId,
       productId,
       type,
-      meta: meta ? meta : undefined, // Postgres Json field
+      meta: meta ? (meta as any) : undefined, // Postgres Json field
     },
   });
 
@@ -171,13 +171,13 @@ fastify.post("/events/generate", async (request, reply) => {
   for (let i = 0; i < c; i++) {
     const u = users[Math.floor(Math.random() * users.length)];
     const p = products[Math.floor(Math.random() * products.length)];
-    const t = types[Math.floor(Math.random() * types.length)];
+    const t = types[Math.floor(Math.random() * types.length)] || "VIEW";
     if (u && p) {
       items.push({
         userId: u.id,
         productId: p.id,
         type: t,
-        meta: { note: "Generated" },
+        meta: { note: "Generated" } as any,
         createdAt: new Date(Date.now() - Math.floor(Math.random() * 10000000)),
       });
     }
