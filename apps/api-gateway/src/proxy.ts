@@ -18,18 +18,27 @@ export async function registerProxy(
     rewritePrefix,
     http2: false,
     // proxyPayloads: true, // This is default true usually.
-    replyOptions: isSSE
-      ? {
-          getUpstream: (req: any, base: any) => {
-            return base;
-          },
-          onResponse: (request: any, reply: any, res: any) => {
-            reply.raw.setHeader("Content-Type", "text/event-stream");
-            reply.raw.setHeader("Cache-Control", "no-cache");
-            reply.raw.setHeader("Connection", "keep-alive");
-            reply.send(res);
-          },
-        }
-      : undefined,
+    // retryCount: 1, // Retry once
+    replyOptions: {
+      rewriteRequestHeaders: (request, headers) => {
+        return {
+          ...headers,
+          "x-service-key": process.env.SERVICE_KEY || "dev-service-key",
+        };
+      },
+      ...(isSSE
+        ? {
+            getUpstream: (req: any, base: any) => {
+              return base;
+            },
+            onResponse: (request: any, reply: any, res: any) => {
+              reply.raw.setHeader("Content-Type", "text/event-stream");
+              reply.raw.setHeader("Cache-Control", "no-cache");
+              reply.raw.setHeader("Connection", "keep-alive");
+              reply.send(res);
+            },
+          }
+        : {}),
+    },
   });
 }

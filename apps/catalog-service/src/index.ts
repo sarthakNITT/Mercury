@@ -9,6 +9,17 @@ const PORT = parseInt(process.env.PORT || "4001");
 
 fastify.register(cors, { origin: true });
 
+// Auth Middleware
+fastify.addHook("preHandler", async (request, reply) => {
+  const allowedPaths = ["/health", "/metrics"];
+  if (allowedPaths.some((p) => request.routerPath?.startsWith(p))) return;
+
+  const key = request.headers["x-service-key"];
+  if (key !== (process.env.SERVICE_KEY || "dev-service-key")) {
+    reply.code(401).send({ error: "Unauthorized Service Call" });
+  }
+});
+
 fastify.get("/health", async () => {
   return { service: "catalog-service", status: "ok" };
 });

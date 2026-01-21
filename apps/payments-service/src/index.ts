@@ -8,6 +8,17 @@ const PORT = parseInt(process.env.PORT || "4005");
 
 fastify.register(cors, { origin: true });
 
+// Auth Middleware
+fastify.addHook("preHandler", async (request, reply) => {
+  const allowedPaths = ["/health", "/metrics", "/webhooks"]; // Allow webhooks (Stripe calls them directly)
+  if (allowedPaths.some((p) => request.routerPath?.startsWith(p))) return;
+
+  const key = request.headers["x-service-key"];
+  if (key !== (process.env.SERVICE_KEY || "dev-service-key")) {
+    reply.code(401).send({ error: "Unauthorized Service Call" });
+  }
+});
+
 // Import centralized stripe instance
 import { stripe } from "./stripe";
 import { prisma } from "@repo/db";
@@ -98,6 +109,41 @@ fastify.post("/checkout/create-session", async (request, reply) => {
   }
 });
 
+// 5. Payment Status Endpoint
+fastify.get("/payments/status", async (request, reply) => {
+  const { sessionId } = request.query as { sessionId: string };
+
+  if (!sessionId) {
+    reply.code(400);
+    return { error: "Missing sessionId" };
+  }
+
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { stripeSessionId: sessionId },
+    });
+
+    if (!payment) {
+      // Payment might not be created yet if webhook is slow, or it failed to create.
+      // But we created PENDING payment *before* returning session to user.
+      // So if not found, it's weird, but treat as PENDING or invalid.
+      return { status: "PENDING", sessionId };
+    }
+
+    return {
+      sessionId,
+      status: payment.status,
+      paymentId: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+    };
+  } catch (err) {
+    request.log.error(err);
+    reply.code(500);
+    return { error: "Internal Server Error" };
+  }
+});
+
 fastify.post("/webhooks/stripe", async (request, reply) => {
   const sig = request.headers["stripe-signature"] as string;
   const rawBody = (request.raw as any).body; // Need raw body for verification.
@@ -122,11 +168,36 @@ fastify.post("/webhooks/stripe", async (request, reply) => {
     return;
   }
 
+  // Idempotency Check
+  const existingEvent = await prisma.stripeWebhookEvent.findUnique({
+    where: { stripeEventId: event.id },
+  });
+
+  if (existingEvent) {
+    request.log.info(`Duplicate webhook event ${event.id} - skipping`);
+    return { received: true, duplicate: true };
+  }
+
+  // Record Event
+  await prisma.stripeWebhookEvent.create({
+    data: { stripeEventId: event.id },
+  });
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
     // Update Payment
     if (session.id) {
+      // Check if already paid to avoid duplicate events
+      const currentPayment = await prisma.payment.findUnique({
+        where: { stripeSessionId: session.id },
+      });
+
+      if (currentPayment && currentPayment.status === "PAID") {
+        request.log.info(`Payment ${session.id} already processed - skipping`);
+        return { received: true, alreadyPaid: true };
+      }
+
       await prisma.payment.updateMany({
         where: { stripeSessionId: session.id },
         data: {

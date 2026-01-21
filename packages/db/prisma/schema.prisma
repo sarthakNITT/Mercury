@@ -56,7 +56,13 @@ model Payment {
   amount                Int
   currency              String
   status                String   // PENDING, PAID, FAILED, CHALLENGED
-  stripeSessionId       String?
-  stripePaymentIntentId String?
+  stripeSessionId       String?  @unique
+  stripePaymentIntentId String?  @unique
   createdAt             DateTime @default(now())
+}
+
+model StripeWebhookEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  createdAt     DateTime @default(now())
 }
