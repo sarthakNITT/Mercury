@@ -19,7 +19,7 @@ export default function SuccessPage({
       return;
     }
 
-    let intervalId: any;
+    let intervalId: ReturnType<typeof setInterval> | undefined = undefined;
     let attempts = 0;
 
     const checkStatus = async () => {
