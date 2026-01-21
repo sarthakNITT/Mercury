@@ -683,9 +683,13 @@ fastify.post("/risk/score", async (request, reply) => {
   };
 });
 
+// Export for testing
+export { fastify };
+
 // Start Server
 const start = async () => {
   try {
+    await fastify.ready();
     await fastify.listen({ port: 4000, host: "0.0.0.0" });
     console.log(`Server listening on http://localhost:4000`);
   } catch (err) {
@@ -694,4 +698,9 @@ const start = async () => {
   }
 };
 
-start();
+// Only start if run directly
+import { fileURLToPath } from "node:url";
+// In bun/tsx, process.argv[1] might be absolute path
+if (process.argv[1] && process.argv[1].endsWith("index.ts")) {
+  start();
+}
