@@ -11,7 +11,7 @@ fastify.register(cors, { origin: true });
 
 // Auth Middleware
 fastify.addHook("preHandler", async (request, reply) => {
-  const allowedPaths = ["/health", "/metrics"];
+  const allowedPaths = ["/health", "/metrics", "/demo"];
   if (allowedPaths.some((p) => request.routerPath?.startsWith(p))) return;
 
   const key = request.headers["x-service-key"];
@@ -321,6 +321,45 @@ fastify.get("/metrics/overview", async (request, reply) => {
     fraud: { blockedCount: 0, challengeCount: 0, avgRiskScore: 0 }, // Simplified fallback
     source: "db",
   };
+});
+
+// Demo Story
+fastify.post("/demo/story", async (request, reply) => {
+  const { mode } = request.query as { mode?: string };
+  const count = 30;
+
+  // Async simulation
+  (async () => {
+    const products = await prisma.product.findMany({ take: 10 });
+    const users = await prisma.user.findMany({ take: 2 });
+
+    if (products.length === 0 || users.length === 0) return;
+
+    for (let i = 0; i < count; i++) {
+      const user = users[i % users.length];
+      const product = products[Math.floor(Math.random() * products.length)];
+      const types = ["VIEW", "CLICK", "CART", "PURCHASE"];
+      const type = types[Math.floor(Math.random() * types.length)] || "VIEW";
+
+      if (user && product) {
+        const event = await prisma.event.create({
+          data: {
+            userId: user.id,
+            productId: product.id,
+            type,
+            meta: {
+              note: "Demo Story",
+              decision: type === "PURCHASE" ? "ALLOW" : undefined,
+            } as any,
+          },
+        });
+        broadcast("EVENT_CREATED", event);
+      }
+      await new Promise((r) => setTimeout(r, mode === "fast" ? 50 : 500));
+    }
+  })();
+
+  return { ok: true, message: "Demo story started", steps: count };
 });
 
 // Perf Metrics (Stub)

@@ -84,6 +84,12 @@ registerProxy(fastify, {
   rewritePrefix: "/trending",
 });
 
+registerProxy(fastify, {
+  upstream: SERVICES.events,
+  prefix: "/demo",
+  rewritePrefix: "/demo",
+});
+
 const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: "0.0.0.0" });
