@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import Dashboard from "../app/dashboard/page";
@@ -13,17 +13,15 @@ vi.mock("../lib/api", () => ({
       breakdown: { VIEW: 50, PURCHASE: 10 },
       fraud: { blockedCount: 5, challengeCount: 2, avgRiskScore: 15.5 },
     }),
-    getRecentEvents: vi
-      .fn()
-      .mockResolvedValue([
-        {
-          id: 1,
-          type: "VIEW",
-          createdAt: new Date().toISOString(),
-          user: { name: "Alice" },
-          product: { name: "Item" },
-        },
-      ]),
+    getRecentEvents: vi.fn().mockResolvedValue([
+      {
+        id: 1,
+        type: "VIEW",
+        createdAt: new Date().toISOString(),
+        user: { name: "Alice" },
+        product: { name: "Item" },
+      },
+    ]),
     getFraudEvents: vi.fn().mockResolvedValue([]),
     getRecommendations: vi.fn().mockResolvedValue({ recommendations: [] }),
     trackEvent: vi.fn().mockResolvedValue({}),
@@ -48,8 +46,10 @@ global.EventSource = class {
   onerror = null;
   close = vi.fn();
   constructor() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return mockEventSource as any;
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any;
 
 describe("Dashboard Component", () => {
