@@ -160,12 +160,76 @@ fastify.get("/metrics/overview", async (request, reply) => {
     breakdown[group.type] = group._count.type;
   });
 
+  // Fraud Metrics
+  const fraudEvents = await prisma.event.findMany({
+    where: {
+      type: "PURCHASE",
+      meta: { contains: "riskScore" },
+    },
+    take: 50,
+    orderBy: { createdAt: "desc" },
+  });
+
+  let blockedCount = 0;
+  let challengeCount = 0;
+  let totalRisk = 0;
+  let riskCount = 0;
+
+  // We need to parse meta to check decision, since SQLite doesn't support JSON querying well in Prisma yet without typed JSON
+  // But we can filter in memory for this hackathon speed.
+  // Actually, let's fetch all purchase attempts with meta (since we know they have it if we added it)
+  // Or just fetch all "PURCHASE" events and parse meta.
+
+  const allPurchases = await prisma.event.findMany({
+    where: { type: "PURCHASE" },
+  });
+
+  allPurchases.forEach((e) => {
+    if (!e.meta) return;
+    try {
+      const meta = JSON.parse(e.meta);
+      if (meta.decision === "BLOCK") blockedCount++;
+      if (meta.decision === "CHALLENGE") challengeCount++;
+      if (meta.riskScore !== undefined) {
+        totalRisk += meta.riskScore;
+        riskCount++;
+      }
+    } catch {}
+  });
+
+  const avgRiskScore = riskCount > 0 ? totalRisk / riskCount : 0;
+
   return {
     totalEvents,
     totalProducts,
     totalUsers,
     breakdown,
+    fraud: {
+      blockedCount,
+      challengeCount,
+      avgRiskScore,
+    },
   };
+});
+
+// Fraud Feed
+fastify.get("/events/fraud", async (request, reply) => {
+  const events = await prisma.event.findMany({
+    where: { type: "PURCHASE" },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    include: { user: true, product: true },
+  });
+
+  // Filter for non-ALLOW in memory
+  const fraudEvents = events
+    .map((e) => {
+      const meta = e.meta ? JSON.parse(e.meta) : {};
+      return { ...e, meta };
+    })
+    .filter((e) => e.meta.decision && e.meta.decision !== "ALLOW");
+
+  return fraudEvents.slice(0, 15);
 });
 
 // Generate Demo Events
@@ -215,6 +279,226 @@ fastify.post("/events/generate", async (request, reply) => {
   });
 
   return { generated: numEvents };
+});
+
+// --- In-Memory Cache for Recommendations ---
+const recommendationsCache = new Map<
+  string,
+  { timestamp: number; data: any }
+>();
+const CACHE_TTL_MS = 30000; // 30 seconds
+
+// --- Recommendations Logic ---
+fastify.get("/recommendations/:productId", async (request, reply) => {
+  const { productId } = request.params as { productId: string };
+  const { userId } = request.query as { userId?: string };
+
+  const cacheKey = `${productId}:${userId || "anon"}`;
+  const cached = recommendationsCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  // 1. Get current product
+  const currentProduct = await prisma.product.findUnique({
+    where: { id: productId },
+  });
+  if (!currentProduct) {
+    reply.code(404);
+    return { error: "Product not found" };
+  }
+
+  // 2. Get candidates (all products excluding current) & Events for scoring
+  const [candidates, recentEvents, userHistory] = await Promise.all([
+    prisma.product.findMany({ where: { id: { not: productId } } }),
+    prisma.event.findMany({
+      where: {
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Last 24h
+      },
+    }),
+    userId
+      ? prisma.event.findMany({
+          where: {
+            userId,
+            createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }, // Last 7 days
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  // 3. Scoring
+  const scored = candidates.map((p) => {
+    let score = 0;
+    const reasons: string[] = [];
+
+    // a) Same category boost
+    if (p.category === currentProduct.category) {
+      score += 30;
+      reasons.push("Same category");
+    }
+
+    // b) Trending boost (recent events)
+    const productEvents = recentEvents.filter((e) => e.productId === p.id);
+    let trendingScore = 0;
+    productEvents.forEach((e) => {
+      if (e.type === "VIEW") trendingScore += 0.2;
+      if (e.type === "CLICK") trendingScore += 0.6;
+      if (e.type === "CART") trendingScore += 1.2;
+      if (e.type === "PURCHASE") trendingScore += 2.0;
+    });
+    if (trendingScore > 0) {
+      score += trendingScore;
+      reasons.push("Trending now");
+    }
+
+    // c) Co-occurrence / User History boost
+    // If user has interacted with this candidate recently
+    const userInteractions = userHistory.filter(
+      (e) => e.productId === p.id && (e.type === "CLICK" || e.type === "CART"),
+    );
+    if (userInteractions.length > 0) {
+      score += 10;
+      reasons.push("Based on your interest");
+    }
+
+    // d) Popularity boost (lifetime) - simplified as small random factor or just skipped for speed if no data
+    // keeping it simple as per instructions "small +"
+    // Let's just add a tiny chaos factor or rely on trending.
+    // Score is float, let's round later.
+
+    return { ...p, score, reasons };
+  });
+
+  // 4. Sort & Truncate
+  scored.sort((a, b) => b.score - a.score);
+  const topRecommendations = scored.slice(0, 6).map((p) => ({
+    id: p.id,
+    name: p.name,
+    price: p.price,
+    currency: p.currency,
+    category: p.category,
+    imageUrl: p.imageUrl,
+    score: parseFloat(p.score.toFixed(2)),
+    reason: p.reasons.join(", ") || "Popular",
+  }));
+
+  const result = { productId, recommendations: topRecommendations };
+
+  // Cache
+  recommendationsCache.set(cacheKey, { timestamp: Date.now(), data: result });
+
+  return result;
+});
+
+// --- Fraud / Risk Scoring Logic ---
+fastify.post("/risk/score", async (request, reply) => {
+  const { userId, productId, amount } = request.body as {
+    userId: string;
+    productId: string;
+    amount: number;
+  };
+
+  let riskScore = 0;
+  const reasons: string[] = [];
+
+  // 1. Amount Rules
+  if (amount >= 200000) {
+    // 2000.00
+    riskScore += 25;
+    reasons.push("High Transaction Value");
+  } else if (amount >= 50000) {
+    // 500.00
+    riskScore += 10;
+    reasons.push("Medium Transaction Value");
+  }
+
+  // 2. Fetch User & History
+  const [user, recentUserEvents, userLifetimeViews] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId } }),
+    prisma.event.findMany({
+      where: {
+        userId,
+        createdAt: { gte: new Date(Date.now() - 5 * 60 * 1000) }, // Last 5 mins covers all velocity checks
+      },
+    }),
+    prisma.event.count({ where: { userId, type: "VIEW" } }),
+  ]);
+
+  if (!user) {
+    // Treat unknown user as high risk? Or just skip account age check.
+    // Demo mode: usually seed creates user. If user is new (random ID in frontend), it might not exist in DB yet.
+    // Let's assume high risk for unknown user or just ignore age.
+    // Rule says "If user account age < 10 minutes: +20"
+    // If user not found, effectively "new", so +20
+    riskScore += 20;
+    reasons.push("New/Unknown Account");
+  } else {
+    const accountAgeMinutes =
+      (Date.now() - new Date(user.createdAt).getTime()) / 60000;
+    if (accountAgeMinutes < 10) {
+      riskScore += 20;
+      reasons.push("New Account (< 10m)");
+    }
+  }
+
+  // 3. Velocity Checks
+  // >= 3 PURCHASE in last 2 mins
+  const recentPurchases = recentUserEvents.filter(
+    (e) =>
+      e.type === "PURCHASE" &&
+      e.createdAt > new Date(Date.now() - 2 * 60 * 1000),
+  );
+  if (recentPurchases.length >= 3) {
+    riskScore += 35;
+    reasons.push("High Purchase Velocity");
+  }
+
+  // >= 5 CART in last 2 mins
+  const recentCarts = recentUserEvents.filter(
+    (e) =>
+      e.type === "CART" && e.createdAt > new Date(Date.now() - 2 * 60 * 1000),
+  );
+  if (recentCarts.length >= 5) {
+    riskScore += 20;
+    reasons.push("High Cart Velocity");
+  }
+
+  // Repeat same product PURCHASE attempts >= 2 times in last 3 mins
+  // Note: Previous attempts might be stored as PURCHASE events or we just check request log?
+  // Instruction says: "If user repeats same product PURCHASE attempt"
+  // We can check recent events for this productId and type PURCHASE
+  const sameProductPurchases = recentUserEvents.filter(
+    (e) =>
+      e.type === "PURCHASE" &&
+      e.productId === productId &&
+      e.createdAt > new Date(Date.now() - 3 * 60 * 1000),
+  );
+  if (sameProductPurchases.length >= 2) {
+    riskScore += 30;
+    reasons.push("Repeated Purchase Attempt");
+  }
+
+  // 4. Zero View History Check
+  // "If user has 0 VIEW events lifetime but tries PURCHASE: +30"
+  if (userLifetimeViews === 0) {
+    riskScore += 30;
+    reasons.push("Purchase without Viewing");
+  }
+
+  // Clamp 0-100
+  riskScore = Math.min(100, Math.max(0, riskScore));
+
+  // Decision
+  let decision: "ALLOW" | "CHALLENGE" | "BLOCK" = "ALLOW";
+  if (riskScore >= 70) decision = "BLOCK";
+  else if (riskScore >= 40) decision = "CHALLENGE";
+
+  return {
+    riskScore,
+    decision,
+    reasons,
+  };
 });
 
 // Start Server

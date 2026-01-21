@@ -15,6 +15,11 @@ export interface Metrics {
   totalProducts: number;
   totalUsers: number;
   breakdown: Record<string, number>;
+  fraud: {
+    blockedCount: number;
+    challengeCount: number;
+    avgRiskScore: number;
+  };
 }
 
 export interface Event {
@@ -23,6 +28,23 @@ export interface Event {
   product?: Product;
   user?: { name: string };
   createdAt: string;
+}
+
+export interface Recommendation {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  category: string;
+  imageUrl?: string;
+  score: number;
+  reason: string;
+}
+
+export interface RiskResult {
+  riskScore: number;
+  decision: "ALLOW" | "CHALLENGE" | "BLOCK";
+  reasons: string[];
 }
 
 export const api = {
@@ -69,6 +91,34 @@ export const api = {
     const res = await fetch(`${API_URL}/events/generate?count=${count}`, {
       method: "POST",
     });
+    return res.json();
+  },
+
+  getRecommendations: async (
+    productId: string,
+    userId?: string,
+  ): Promise<{ productId: string; recommendations: Recommendation[] }> => {
+    const res = await fetch(
+      `${API_URL}/recommendations/${productId}?userId=${userId || ""}`,
+    );
+    return res.json();
+  },
+
+  scoreRisk: async (
+    userId: string,
+    productId: string,
+    amount: number,
+  ): Promise<RiskResult> => {
+    const res = await fetch(`${API_URL}/risk/score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, productId, amount }),
+    });
+    return res.json();
+  },
+
+  getFraudEvents: async (): Promise<Event[]> => {
+    const res = await fetch(`${API_URL}/events/fraud`);
     return res.json();
   },
 };

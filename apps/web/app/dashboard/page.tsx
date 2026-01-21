@@ -6,17 +6,20 @@ import { api, Metrics, Event } from "../../lib/api";
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [fraudEvents, setFraudEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
   const fetchData = async () => {
     try {
-      const [m, e] = await Promise.all([
+      const [m, e, f] = await Promise.all([
         api.getMetrics(),
         api.getRecentEvents(),
+        api.getFraudEvents(),
       ]);
       setMetrics(m);
       setEvents(e);
+      setFraudEvents(f);
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
     } finally {
@@ -114,6 +117,29 @@ export default function Dashboard() {
         </div>
       )}
 
+      {metrics && metrics.fraud && (
+        <div className="stats-grid" style={{ marginTop: "1rem" }}>
+          <div className="stat-card" style={{ borderColor: "#da3633" }}>
+            <div className="stat-label" style={{ color: "#da3633" }}>
+              Blocked Txns
+            </div>
+            <div className="stat-value">{metrics.fraud.blockedCount}</div>
+          </div>
+          <div className="stat-card" style={{ borderColor: "#d29922" }}>
+            <div className="stat-label" style={{ color: "#d29922" }}>
+              Challenged
+            </div>
+            <div className="stat-value">{metrics.fraud.challengeCount}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">Avg Risk Score</div>
+            <div className="stat-value">
+              {metrics.fraud.avgRiskScore.toFixed(1)}
+            </div>
+          </div>
+        </div>
+      )}
+
       {metrics && metrics.breakdown && (
         <div
           style={{
@@ -168,6 +194,57 @@ export default function Dashboard() {
               <tr>
                 <td colSpan={4} style={{ textAlign: "center" }}>
                   No events yet
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="title" style={{ marginTop: "2rem", color: "#da3633" }}>
+        Fraud Feed (High Risk)
+      </h2>
+      <div className="card" style={{ borderColor: "#da3633" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>User</th>
+              <th>Product</th>
+              <th>Risk</th>
+              <th>Decision</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {fraudEvents.map((event: any) => (
+              <tr key={event.id}>
+                <td style={{ color: "#8b949e", fontSize: "0.9rem" }}>
+                  {new Date(event.createdAt).toLocaleTimeString()}
+                </td>
+                <td>{event.user?.name || "Unknown"}</td>
+                <td>{event.product?.name || "Unknown"}</td>
+                <td style={{ fontWeight: "bold" }}>{event.meta?.riskScore}</td>
+                <td>
+                  <span
+                    className="tag"
+                    style={{
+                      backgroundColor:
+                        event.meta?.decision === "BLOCK"
+                          ? "#da3633"
+                          : "#d29922",
+                      color: "white",
+                    }}
+                  >
+                    {event.meta?.decision}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {fraudEvents.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center" }}>
+                  No suspicious activity detected
                 </td>
               </tr>
             )}
