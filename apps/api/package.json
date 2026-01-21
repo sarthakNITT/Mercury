@@ -11,7 +11,7 @@
     "prisma:studio": "prisma studio",
     "db:push": "prisma db push",
     "lint": "tsc --noEmit",
-    "test": "vitest",
+    "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
