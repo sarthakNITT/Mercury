@@ -9,6 +9,8 @@ export default function Dashboard() {
   const [fraudEvents, setFraudEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [judgesMode, setJudgesMode] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -29,9 +31,60 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 3000); // Poll every 3 seconds
-    return () => clearInterval(interval);
+    // const interval = setInterval(fetchData, 3000); // Remove polling in favor of SSE
+
+    // SSE Subscription
+    const eventSource = new EventSource(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000"}/events/stream`,
+    );
+
+    eventSource.onopen = () => {
+      setLiveConnected(true);
+      console.log("SSE Connected");
+    };
+
+    eventSource.onmessage = () => {
+      // Just refresh data on event
+      // In a real app we'd append to state, but for this hackathon speed, re-fetching is safer/easier
+      // to ensure sync with DB state
+      fetchData();
+    };
+
+    eventSource.onerror = () => {
+      setLiveConnected(false);
+      eventSource.close();
+      // Simple reconnect logic implicitly handled by useEffect if we wanted,
+      // but let's just leave it closed or retry on reload for simplicity,
+      // or actually valid SSE clients reconnect automatically usually.
+      // Browser implementation reconnects automatically.
+    };
+
+    return () => {
+      eventSource.close();
+      // clearInterval(interval);
+    };
   }, []);
+
+  const handleDemoStory = async () => {
+    setGenerating(true);
+    if (judgesMode) {
+      // Fast mode for judges
+      try {
+        await api.runDemoStory("fast");
+        alert("30s Demo Story Started! Watch the dashboard.");
+      } catch {
+        alert("Error starting demo");
+      }
+    } else {
+      try {
+        await api.runDemoStory("normal");
+        alert("Demo Story Started!");
+      } catch {
+        alert("Error starting demo");
+      }
+    }
+    setGenerating(false);
+  };
 
   const handleSeed = async () => {
     if (!confirm("This will add products and users. Continue?")) return;
@@ -73,24 +126,90 @@ export default function Dashboard() {
           marginBottom: "2rem",
         }}
       >
-        <h1 className="title" style={{ fontSize: "2rem" }}>
-          Live Dashboard
-        </h1>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <button
-            onClick={handleSeed}
-            disabled={generating}
-            className="btn btn-outline"
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <h1 className="title" style={{ fontSize: "2rem", marginBottom: 0 }}>
+            {judgesMode ? "Mercury Intelligence" : "Live Dashboard"}
+          </h1>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              background: liveConnected
+                ? "rgba(50, 255, 100, 0.1)"
+                : "rgba(255, 50, 50, 0.1)",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "20px",
+              border: `1px solid ${liveConnected ? "#7ee787" : "#da3633"}`,
+            }}
           >
-            Seed Database
-          </button>
+            <div
+              style={{
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                backgroundColor: liveConnected ? "#7ee787" : "#da3633",
+                boxShadow: liveConnected ? "0 0 8px #7ee787" : "none",
+              }}
+            ></div>
+            <span
+              style={{
+                fontSize: "0.8rem",
+                color: liveConnected ? "#7ee787" : "#da3633",
+                fontWeight: "bold",
+              }}
+            >
+              {liveConnected ? "LIVE" : "OFFLINE"}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              cursor: "pointer",
+              marginRight: "1rem",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={judgesMode}
+              onChange={(e) => setJudgesMode(e.target.checked)}
+            />
+            <span style={{ fontWeight: "bold" }}>Judges Mode</span>
+          </label>
+
+          {!judgesMode && (
+            <button
+              onClick={handleSeed}
+              disabled={generating}
+              className="btn btn-outline"
+            >
+              Seed Database
+            </button>
+          )}
+
           <button
-            onClick={handleGenerateValues}
+            onClick={handleDemoStory}
             disabled={generating}
             className="btn"
+            style={{ backgroundColor: "#a371f7", color: "white" }}
           >
-            Generate 50 Demo Events
+            {generating ? "Running..." : "Run 30s Demo Story"}
           </button>
+
+          {!judgesMode && (
+            <button
+              onClick={handleGenerateValues}
+              disabled={generating}
+              className="btn"
+            >
+              Gen 50 Events
+            </button>
+          )}
         </div>
       </div>
 

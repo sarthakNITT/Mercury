@@ -121,4 +121,13 @@ export const api = {
     const res = await fetch(`${API_URL}/events/fraud`);
     return res.json();
   },
+
+  runDemoStory: async (mode: string = "normal"): Promise<unknown> => {
+    const res = await fetch(`${API_URL}/demo/story?mode=${mode}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ steps: 30 }),
+    });
+    return res.json();
+  },
 };
