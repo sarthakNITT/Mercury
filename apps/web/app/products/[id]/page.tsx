@@ -70,36 +70,42 @@ export default function ProductPage({
 
     if (type === "PURCHASE") {
       try {
-        const risk = await api.scoreRisk(userId, product.id, product.price);
+        setLoading(true);
+        const checkout = await api.createCheckoutSession(userId, [
+          {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            quantity: 1,
+          },
+        ]);
 
-        let allowed = true;
-        if (risk.decision === "BLOCK") allowed = false;
+        setLoading(false);
 
-        // Always track
-        await api.trackEvent(userId, type, product.id, {
-          price: product.price,
-          currency: product.currency,
-          attempted: true,
-          allowed,
-          riskScore: risk.riskScore,
-          decision: risk.decision,
-          reasons: risk.reasons.join(", "),
-        });
-
-        if (risk.decision === "ALLOW") {
-          alert("Payment Successful (Demo)");
-        } else if (risk.decision === "CHALLENGE") {
+        if (checkout.error) {
           alert(
-            `Payment needs verification.\nRisk Score: ${risk.riskScore}\nReasons: ${risk.reasons.join(", ")}`,
+            `Transaction Failed: ${checkout.error}\n\n${checkout.reasons ? checkout.reasons.join(", ") : ""}`,
           );
+          return;
+        }
+
+        if (checkout.decision === "BLOCK") {
+          alert(
+            `Transaction Blocked by Risk Engine.\nReasons: ${checkout.reasons?.join(", ")}`,
+          );
+          return;
+        }
+
+        if (checkout.url) {
+          // Redirect to Stripe
+          window.location.href = checkout.url;
         } else {
-          alert(
-            `Payment BLOCKED due to high risk!\nRisk Score: ${risk.riskScore}\nReasons: ${risk.reasons.join(", ")}`,
-          );
+          alert("Could not generate payment session.");
         }
       } catch (err) {
-        console.error("Risk check failed", err);
+        console.error("Purchase failed", err);
         alert("Payment service unavailable");
+        setLoading(false);
       }
       return;
     }
@@ -110,7 +116,7 @@ export default function ProductPage({
       currency: product.currency,
     });
 
-    alert(`Event ${type} tracked!`);
+    if (type === "CART") alert("Added to cart!");
   };
 
   if (loading) return <div className="container">Loading details...</div>;

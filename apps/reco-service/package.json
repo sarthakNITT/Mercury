@@ -12,7 +12,8 @@
     "@fastify/cors": "^9.0.1",
     "@repo/shared": "workspace:*",
     "@repo/db": "workspace:*",
-    "@repo/redis": "workspace:*"
+    "@repo/redis": "workspace:*",
+    "@tensorflow/tfjs-node": "^4.17.0"
   },
   "devDependencies": {
     "tsx": "^4.7.1",

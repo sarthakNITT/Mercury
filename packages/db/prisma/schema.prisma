@@ -48,3 +48,15 @@ model Event {
   @@index([userId])
   @@index([productId])
 }
+
+model Payment {
+  id                    String   @id @default(cuid())
+  userId                String
+  productId             String
+  amount                Int
+  currency              String
+  status                String   // PENDING, PAID, FAILED, CHALLENGED
+  stripeSessionId       String?
+  stripePaymentIntentId String?
+  createdAt             DateTime @default(now())
+}

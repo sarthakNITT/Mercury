@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { prisma } from "@repo/db";
 import { getRedis, isRedisAvailable } from "@repo/redis";
+import * as tf from "@tensorflow/tfjs-node";
 
 const fastify = Fastify({ logger: true });
 const PORT = parseInt(process.env.PORT || "4003");
@@ -13,6 +14,22 @@ const recommendationsCache = new Map<
   { timestamp: number; data: any }
 >();
 const CACHE_TTL_MS = 30000;
+
+// Simple TF Model (Functional way to ensure deterministic weights)
+// We will simulate a trained model by using fixed weights.
+// Features: [categoryMatch (0/1), trendingScore (0-1), userAffinity (0/1), priceBucket (0-1)]
+const MODEL_WEIGHTS = tf.tensor1d([0.3, 0.5, 0.2, -0.1]); // weights
+const MODEL_BIAS = tf.scalar(0.05);
+
+function predictScore(features: number[]) {
+  return tf.tidy(() => {
+    const input = tf.tensor1d(features);
+    // Dot product + bias
+    const score = input.dot(MODEL_WEIGHTS).add(MODEL_BIAS);
+    // Sigmoid to keep between 0-1, then scale up
+    return score.sigmoid().mul(100).dataSync()[0] || 0;
+  });
+}
 
 fastify.get("/health", async () => {
   return { service: "reco-service", status: "ok" };
@@ -75,37 +92,44 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
   ]);
 
   const scored = candidates.map((p) => {
-    let score = 0;
-    const reasons: string[] = [];
-    if (p.category === currentProduct.category) {
-      score += 30;
-      reasons.push("Same category");
-    }
-    const productEvents = recentEvents.filter((e) => e.productId === p.id);
-    let trendingScore = 0;
-    productEvents.forEach((e) => {
-      if (e.type === "VIEW") trendingScore += 0.2;
-      if (e.type === "CLICK") trendingScore += 0.6;
-      if (e.type === "CART") trendingScore += 1.2;
-      if (e.type === "PURCHASE") trendingScore += 2.0;
-    });
-    if (trendingScore > 0) {
-      score += trendingScore;
-      reasons.push("Trending now");
-    }
-    if (
-      userHistory.some(
-        (e) =>
-          e.productId === p.id && (e.type === "CLICK" || e.type === "CART"),
-      )
-    ) {
-      score += 10;
-      reasons.push("Based on your interest");
-    }
-    // TF Placeholder logic
-    // if (useTensorFlow) { score += tfModel.predict(p, user); }
+    // Calculate Features
+    const categoryMatch = p.category === currentProduct.category ? 1 : 0;
 
-    return { ...p, score, reasons };
+    // Check trending score
+    const productEvents = recentEvents.filter((e) => e.productId === p.id);
+    let trendingVal = 0;
+    productEvents.forEach((e) => {
+      if (e.type === "VIEW") trendingVal += 0.2;
+      if (e.type === "CLICK") trendingVal += 0.6;
+      if (e.type === "CART") trendingVal += 2.0;
+      if (e.type === "PURCHASE") trendingVal += 5.0;
+    });
+    const trendingScore = Math.min(trendingVal, 10) / 10; // Normalize 0-1
+
+    // User affinity
+    const userAffinity = userHistory.some((e) => e.productId === p.id) ? 1 : 0;
+
+    // Price bucket (Normalized around base price)
+    const priceBucket = Math.min(p.price / (currentProduct.price || 1), 2) / 2;
+
+    const features = [categoryMatch, trendingScore, userAffinity, priceBucket];
+
+    // Run Inference
+    const tfScore = predictScore(features);
+
+    // Construct reasons directly from factors
+    const reasons: string[] = [];
+    if (categoryMatch) reasons.push("Similar Category");
+    if (trendingScore > 0.3) reasons.push("Trending");
+    if (userAffinity) reasons.push("Based on History");
+    if (tfScore > 75) reasons.push("High Match Score");
+
+    return {
+      ...p,
+      score: tfScore,
+      reasons,
+      scoreBreakdown: { tfScore, trendingScore, categoryMatch },
+    };
   });
 
   scored.sort((a, b) => b.score - a.score);

@@ -142,4 +142,13 @@ export const api = {
     });
     return res.json();
   },
+
+  createCheckoutSession: async (userId: string, items: any[]): Promise<any> => {
+    const res = await fetch(`${API_URL}/checkout/create-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, items }),
+    });
+    return res.json();
+  },
 };
