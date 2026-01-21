@@ -1,5 +1,5 @@
 bun run build
 bun run lint
-bun run check-types
+bun run typecheck
 # Run tests (allowing turbo to cache)
-bun run turbo run test
+bun run test
