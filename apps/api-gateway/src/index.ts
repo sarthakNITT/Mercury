@@ -1,13 +1,37 @@
 import Fastify, { FastifyReply, FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import proxy from "@fastify/http-proxy";
+import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import crypto from "node:crypto";
+import {
+  EventBodySchema,
+  RiskScoreSchema,
+  CheckoutSessionSchema,
+} from "@repo/shared";
 
 const fastify = Fastify({
   logger: {
     mixin: () => ({ service: "api-gateway" }),
   },
   genReqId: () => crypto.randomUUID(),
+  bodyLimit: 1048576, // 1MB
+});
+
+// Security Headers
+fastify.register(helmet, { global: true });
+
+// Rate Limiting
+fastify.register(rateLimit, {
+  max: (req, key) => {
+    const url = req.url;
+    if (url === "/checkout/create-session" && req.method === "POST") return 20;
+    if (url === "/risk/score" && req.method === "POST") return 60;
+    if (url === "/events" && req.method === "POST") return 120;
+    if (url === "/events/stream" && req.method === "GET") return 30;
+    return 100;
+  },
+  timeWindow: "1 minute",
 });
 
 // Metrics
@@ -45,9 +69,22 @@ fastify.setNotFoundHandler((request, reply) => {
 // Error Handler
 fastify.setErrorHandler((error, request, reply) => {
   request.log.error(error);
-  reply.status(500).send({
+
+  const statusCode = error.statusCode || 500;
+  // Handle Rate Limit Error (429)
+  if (statusCode === 429) {
+    reply.status(429).send({
+      ok: false,
+      error: "RATE_LIMITED",
+      message: error.message || "Rate limit exceeded",
+      traceId: request.id,
+    });
+    return;
+  }
+
+  reply.status(statusCode).send({
     ok: false,
-    error: error.name,
+    error: error.name || "Internal Server Error",
     message: error.message,
     traceId: request.id,
   });
@@ -89,7 +126,52 @@ fastify.get("/metrics", async () => {
   };
 });
 
-// --- Proxy Rules ---
+// --- Validation Logic ---
+// We validate request bodies here before they are proxied.
+fastify.addHook("preHandler", async (request, reply) => {
+  const { url, method } = request;
+
+  if (method === "POST") {
+    if (url === "/checkout/create-session") {
+      const result = CheckoutSessionSchema.safeParse(request.body);
+      if (!result.success) {
+        reply.code(400).send({
+          ok: false,
+          error: "VALIDATION_ERROR",
+          message: "Invalid Checkout format",
+          details: result.error.issues,
+          traceId: request.id,
+        });
+        return request;
+      }
+    } else if (url === "/risk/score") {
+      const result = RiskScoreSchema.safeParse(request.body);
+      if (!result.success) {
+        reply.code(400).send({
+          ok: false,
+          error: "VALIDATION_ERROR",
+          message: "Invalid Risk Score format",
+          details: result.error.issues,
+          traceId: request.id,
+        });
+        return request;
+      }
+    } else if (url === "/events") {
+      const result = EventBodySchema.safeParse(request.body);
+      if (!result.success) {
+        reply.code(400).send({
+          ok: false,
+          error: "VALIDATION_ERROR",
+          message: "Invalid Event format",
+          details: result.error.issues,
+          traceId: request.id,
+        });
+        return request;
+      }
+    }
+  }
+});
+
 import { registerProxy } from "./proxy";
 
 // 1. Catalog Service
