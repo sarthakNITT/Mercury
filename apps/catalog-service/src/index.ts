@@ -3,7 +3,35 @@ import cors from "@fastify/cors";
 import { prisma } from "@repo/db";
 import { ProductSchema } from "@repo/shared";
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+  logger: {
+    mixin: () => ({ service: "catalog-service" }),
+  },
+});
+
+// Metrics
+const startTime = Date.now();
+let requestCount = 0;
+
+fastify.addHook("onRequest", async (request) => {
+  requestCount++;
+  if (request.headers["x-trace-id"]) {
+    request.id = request.headers["x-trace-id"] as string;
+  }
+});
+
+fastify.addHook("onResponse", async (request, reply) => {
+  request.log.info(
+    {
+      traceId: request.id,
+      method: request.method,
+      url: request.url,
+      statusCode: reply.statusCode,
+      durationMs: reply.getResponseTime(),
+    },
+    "request completed",
+  );
+});
 
 const PORT = parseInt(process.env.PORT || "4001");
 
@@ -11,7 +39,7 @@ fastify.register(cors, { origin: true });
 
 // Auth Middleware
 fastify.addHook("preHandler", async (request, reply) => {
-  const allowedPaths = ["/health", "/metrics", "/seed"];
+  const allowedPaths = ["/health", "/metrics", "/ready", "/seed"];
   if (allowedPaths.some((p) => request.routerPath?.startsWith(p))) return;
 
   const key = request.headers["x-service-key"];
@@ -21,7 +49,38 @@ fastify.addHook("preHandler", async (request, reply) => {
 });
 
 fastify.get("/health", async () => {
-  return { service: "catalog-service", status: "ok" };
+  return {
+    ok: true,
+    service: "catalog-service",
+    time: new Date().toISOString(),
+  };
+});
+
+fastify.get("/ready", async () => {
+  let dbStatus = "down";
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = "up";
+  } catch (e) {
+    fastify.log.error(e);
+  }
+
+  return {
+    ok: dbStatus === "up",
+    service: "catalog-service",
+    dependencies: {
+      db: dbStatus,
+      redis: "not_used",
+    },
+  };
+});
+
+fastify.get("/metrics", async () => {
+  return {
+    service: "catalog-service",
+    uptimeSeconds: Math.floor((Date.now() - startTime) / 1000),
+    requestsTotal: requestCount,
+  };
 });
 
 // Get Products

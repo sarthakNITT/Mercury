@@ -24,6 +24,7 @@ export async function registerProxy(
         return {
           ...headers,
           "x-service-key": process.env.SERVICE_KEY || "dev-service-key",
+          "x-trace-id": request.id as string,
         };
       },
       ...(isSSE

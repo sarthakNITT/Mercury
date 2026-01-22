@@ -4,14 +4,51 @@ import { prisma } from "@repo/db";
 import { getRedis, isRedisAvailable } from "@repo/redis";
 import { EventBodySchema } from "@repo/shared";
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+  logger: {
+    mixin: () => ({ service: "events-service" }),
+  },
+});
+
+// Metrics
+const startTime = Date.now();
+let requestCount = 0;
+
+fastify.addHook("onRequest", async (request) => {
+  requestCount++;
+  if (request.headers["x-trace-id"]) {
+    request.id = request.headers["x-trace-id"] as string;
+  }
+});
+
+fastify.addHook("onResponse", async (request, reply) => {
+  request.log.info(
+    {
+      traceId: request.id,
+      method: request.method,
+      url: request.url,
+      statusCode: reply.statusCode,
+      durationMs: reply.getResponseTime(),
+    },
+    "request completed",
+  );
+});
 const PORT = parseInt(process.env.PORT || "4002");
 
 fastify.register(cors, { origin: true });
 
 // Auth Middleware
 fastify.addHook("preHandler", async (request, reply) => {
-  const allowedPaths = ["/health", "/metrics", "/demo"];
+  const allowedPaths = [
+    "/health",
+    "/metrics",
+    "/ready",
+    "/demo",
+    "/events/stream",
+  ]; // events/stream is usually public-ish via gateway? The code logic checks startsWith.
+  // Original allowed paths: ["/health", "/metrics", "/demo"]. Warning: /metrics existed before (metrics/overview).
+  // The global /metrics I am adding might conflict if not careful, but fastify router handles exact vs prefix.
+  // The middleware uses startsWith. "/metrics" covers "/metrics" and "/metrics/overview" and "/metrics/perf".
   if (allowedPaths.some((p) => request.routerPath?.startsWith(p))) return;
 
   const key = request.headers["x-service-key"];
@@ -37,7 +74,52 @@ setInterval(() => {
 }, 15000);
 
 fastify.get("/health", async () => {
-  return { service: "events-service", status: "ok" };
+  return {
+    ok: true,
+    service: "events-service",
+    time: new Date().toISOString(),
+  };
+});
+
+fastify.get("/ready", async () => {
+  let dbStatus = "down";
+  let redisStatus = "down";
+
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = "up";
+  } catch (e) {
+    fastify.log.error(e);
+  }
+
+  if (isRedisAvailable()) {
+    try {
+      await getRedis().ping();
+      redisStatus = "up";
+    } catch (e) {
+      fastify.log.error(e);
+    }
+  } else {
+    redisStatus = "not_used";
+  }
+
+  return {
+    ok:
+      dbStatus === "up" && (redisStatus === "up" || redisStatus === "not_used"),
+    service: "events-service",
+    dependencies: {
+      db: dbStatus,
+      redis: redisStatus,
+    },
+  };
+});
+
+fastify.get("/metrics", async () => {
+  return {
+    service: "events-service",
+    uptimeSeconds: Math.floor((Date.now() - startTime) / 1000),
+    requestsTotal: requestCount,
+  };
 });
 
 // SSE Stream

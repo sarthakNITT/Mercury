@@ -1,8 +1,58 @@
 import Fastify, { FastifyReply, FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import proxy from "@fastify/http-proxy";
+import crypto from "node:crypto";
 
-const fastify = Fastify({ logger: true });
+const fastify = Fastify({
+  logger: {
+    mixin: () => ({ service: "api-gateway" }),
+  },
+  genReqId: () => crypto.randomUUID(),
+});
+
+// Metrics
+const startTime = Date.now();
+let requestCount = 0;
+
+fastify.addHook("onRequest", async (request) => {
+  requestCount++;
+});
+
+// Response Logger Hook
+fastify.addHook("onResponse", async (request, reply) => {
+  request.log.info(
+    {
+      traceId: request.id,
+      method: request.method,
+      url: request.url,
+      statusCode: reply.statusCode,
+      durationMs: reply.getResponseTime(),
+    },
+    "request completed",
+  );
+});
+
+// 404 Handler
+fastify.setNotFoundHandler((request, reply) => {
+  reply.code(404).send({
+    ok: false,
+    error: "Not Found",
+    message: `Route ${request.method}:${request.url} not found`,
+    traceId: request.id,
+  });
+});
+
+// Error Handler
+fastify.setErrorHandler((error, request, reply) => {
+  request.log.error(error);
+  reply.status(500).send({
+    ok: false,
+    error: error.name,
+    message: error.message,
+    traceId: request.id,
+  });
+});
+
 const PORT = parseInt(process.env.PORT || "4000");
 
 // Services map
@@ -17,7 +67,26 @@ const SERVICES = {
 fastify.register(cors, { origin: true });
 
 fastify.get("/health", async () => {
-  return { service: "api-gateway", status: "ok" };
+  return { ok: true, service: "api-gateway", time: new Date().toISOString() };
+});
+
+fastify.get("/ready", async () => {
+  return {
+    ok: true,
+    service: "api-gateway",
+    dependencies: {
+      db: "not_used",
+      redis: "not_used",
+    },
+  };
+});
+
+fastify.get("/metrics", async () => {
+  return {
+    service: "api-gateway",
+    uptimeSeconds: Math.floor((Date.now() - startTime) / 1000),
+    requestsTotal: requestCount,
+  };
 });
 
 // --- Proxy Rules ---
@@ -72,10 +141,17 @@ registerProxy(fastify, {
 });
 
 // 6. Metrics & Trending (Events Service)
+// 6. Metrics & Trending (Events Service)
 registerProxy(fastify, {
   upstream: SERVICES.events,
-  prefix: "/metrics",
-  rewritePrefix: "/metrics",
+  prefix: "/metrics/overview",
+  rewritePrefix: "/metrics/overview",
+});
+
+registerProxy(fastify, {
+  upstream: SERVICES.events,
+  prefix: "/metrics/perf",
+  rewritePrefix: "/metrics/perf",
 });
 
 registerProxy(fastify, {
