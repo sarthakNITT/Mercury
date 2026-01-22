@@ -44,7 +44,6 @@ async function runSmokeTest() {
       "   Scores:",
       recos.recommendations.map((r: any) => r.score).join(", "),
     );
-    // Check if scoreBreakdown exists (implies TF logic ran if we modified response to include it, or at least we get scores)
 
     // 5. Checkout Session (Risk + Stripe)
     console.log("\n5. Creating Checkout Session...");
@@ -63,9 +62,33 @@ async function runSmokeTest() {
       console.error("❌ Checkout Failed:", checkout);
     }
 
-    // 6. SSE Check (Manual)
+    // 6. Streaming (Worker) Verification
+    console.log("\n6. Streaming & Worker Verification...");
+    console.log("   Starting Demo Story (fast mode)...");
+    await client.post("/demo/story?mode=fast", {});
+
+    console.log("   Waiting for worker to process events (2s)...");
+    await new Promise((r) => setTimeout(r, 2000));
+
+    console.log("   Checking Metrics Source...");
+    const metrics = await client.get<any>("/metrics/overview");
+    console.log("   Metrics Source:", metrics.source);
+
+    if (metrics.source === "redis") {
+      console.log("✅ Worker is updating Redis correctly!");
+    } else {
+      console.warn(
+        "⚠️ Metrics source is NOT redis (worker might be down or laggy)",
+      );
+    }
+
+    console.log("   Checking Trending Source...");
+    const trending = await client.get<any>("/trending");
+    console.log("   Trending Source:", trending.source);
+
+    // 7. SSE Check (Manual)
     console.log(
-      "\n6. SSE Stream Check skipped (manual verification needed via browser)",
+      "\n7. SSE Stream Check skipped (manual verification needed via browser)",
     );
 
     console.log("\n✅ SMOKE TEST PASSED!");

@@ -160,45 +160,29 @@ fastify.post("/events", async (request, reply) => {
     },
   });
 
-  // Redis Updates (Fire & Forget)
+  // Redis Updates (Publish to Stream)
   if (isRedisAvailable()) {
     const redis = getRedis();
-    const score =
-      type === "VIEW"
-        ? 1
-        : type === "CLICK"
-          ? 3
-          : type === "CART"
-            ? 6
-            : type === "PURCHASE"
-              ? 10
-              : 0;
 
-    if (score > 0) {
-      redis
-        .zincrby("mercury:trending:24h", score, productId)
-        .catch(console.error);
-      redis.expire("mercury:trending:24h", 86400);
-    }
+    // Prepare payload for Redis Stream (strings only)
+    const streamArgs = [
+      "eventId",
+      event.id,
+      "type",
+      event.type,
+      "userId",
+      event.userId,
+      "productId",
+      event.productId,
+      "createdAt",
+      event.createdAt.toISOString(),
+      "meta",
+      event.meta ? JSON.stringify(event.meta) : "{}",
+    ];
 
-    const pipeline = redis.pipeline();
-    pipeline.hincrby("mercury:metrics:counters", "total_events", 1);
-    if (type === "VIEW")
-      pipeline.hincrby("mercury:metrics:counters", "views", 1);
-    if (type === "CLICK")
-      pipeline.hincrby("mercury:metrics:counters", "clicks", 1);
-    if (type === "CART")
-      pipeline.hincrby("mercury:metrics:counters", "carts", 1);
-    if (type === "PURCHASE") {
-      pipeline.hincrby("mercury:metrics:counters", "purchases", 1);
-      if (meta && (meta as any).decision === "BLOCK")
-        pipeline.hincrby("mercury:metrics:counters", "blocked", 1);
-      if (meta && (meta as any).decision === "CHALLENGE")
-        pipeline.hincrby("mercury:metrics:counters", "challenged", 1);
-      if (meta && (meta as any).decision === "ALLOW")
-        pipeline.hincrby("mercury:metrics:counters", "allowed", 1);
-    }
-    pipeline.exec().catch(console.error);
+    redis.xadd("mercury:events", "*", ...streamArgs).catch((err) => {
+      request.log.warn({ err }, "Failed to publish event to Redis Stream");
+    });
   }
 
   // Broadcast
