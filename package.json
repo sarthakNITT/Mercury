@@ -8,6 +8,7 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "smoke": "bun run scripts/smoke-test.ts",
+    "rate:test": "bash scripts/rate-limit-test.sh",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prepare": "husky",
     "redis:up": "docker compose up -d redis",
