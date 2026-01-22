@@ -133,3 +133,46 @@ Learn more about the power of Turborepo:
 - [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
 - [Configuration Options](https://turborepo.dev/docs/reference/configuration)
 - [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+
+## Production Deployment
+
+This project supports a full production deployment via Docker Compose.
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Stripe Keys (Secret Key & Webhook Secret)
+
+### Deployment Steps
+
+1. Create a `.env` file or export the following variables:
+
+   ```bash
+   export SERVICE_KEY="your-secure-internal-key"
+   export STRIPE_SECRET_KEY="sk_live_..."
+   export STRIPE_WEBHOOK_SECRET="whsec_..."
+   ```
+
+2. Run the production compose file:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+3. Access the services:
+   - **Web App**: http://localhost:3000
+   - **API Gateway**: http://localhost:4000
+
+### Verification
+
+Run the production smoke test script to verify all services are healthy and connected:
+
+```bash
+./scripts/prod-smoke.sh
+```
+
+### Architecture
+
+- **Public**: Web (3000), Gateway (4000)
+- **Private**: Postgres, Redis, Microservices (Catalog, Events, Reco, Risk, Payments, Worker)
+- **Networking**: Internal bridge network isolates backend services.

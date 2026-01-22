@@ -1,0 +1,168 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lavapunk_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+
+  catalog-service:
+    build:
+      context: .
+      dockerfile: apps/catalog-service/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/lavapunk_db
+      REDIS_URL: redis://redis:6379
+      PORT: 4001
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - internal
+
+  events-service:
+    build:
+      context: .
+      dockerfile: apps/events-service/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/lavapunk_db
+      REDIS_URL: redis://redis:6379
+      PORT: 4002
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - internal
+
+  reco-service:
+    build:
+      context: .
+      dockerfile: apps/reco-service/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/lavapunk_db
+      REDIS_URL: redis://redis:6379
+      PORT: 4003
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - internal
+
+  risk-service:
+    build:
+      context: .
+      dockerfile: apps/risk-service/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/lavapunk_db
+      REDIS_URL: redis://redis:6379
+      PORT: 4004
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - internal
+
+  payments-service:
+    build:
+      context: .
+      dockerfile: apps/payments-service/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/lavapunk_db
+      REDIS_URL: redis://redis:6379
+      PORT: 4005
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - internal
+
+  worker-service:
+    build:
+      context: .
+      dockerfile: apps/worker-service/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/lavapunk_db
+      REDIS_URL: redis://redis:6379
+      HOSTNAME: worker-prod-1
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+    depends_on:
+      - redis
+      - events-service
+    networks:
+      - internal
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      CATALOG_URL: http://catalog-service:4001
+      EVENTS_URL: http://events-service:4002
+      RECO_URL: http://reco-service:4003
+      RISK_URL: http://risk-service:4004
+      PAYMENTS_URL: http://payments-service:4005
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+    depends_on:
+      - catalog-service
+      - events-service
+      - reco-service
+      - risk-service
+      - payments-service
+    networks:
+      - internal
+      - public
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://api-gateway:4000
+    depends_on:
+      - api-gateway
+    networks:
+      - public
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  public:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
