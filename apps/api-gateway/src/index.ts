@@ -248,6 +248,25 @@ registerProxy(fastify, {
   rewritePrefix: "/demo",
 });
 
+// 7. Config Service
+registerProxy(fastify, {
+  upstream: process.env.CONFIG_URL || "http://localhost:4006",
+  prefix: "/configs",
+  rewritePrefix: "/configs",
+});
+
+registerProxy(fastify, {
+  upstream: process.env.CONFIG_URL || "http://localhost:4006",
+  prefix: "/risk-rules",
+  rewritePrefix: "/risk-rules",
+});
+
+registerProxy(fastify, {
+  upstream: process.env.CONFIG_URL || "http://localhost:4006",
+  prefix: "/model-registry",
+  rewritePrefix: "/model-registry",
+});
+
 const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: "0.0.0.0" });

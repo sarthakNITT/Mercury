@@ -1,7 +1,52 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { prisma } from "@repo/db";
-import { calculateRiskScore } from "./logic";
+import { calculateRiskScore, RiskRule } from "./logic";
+import { HttpClient } from "@repo/http";
+
+const CONFIG_URL = process.env.CONFIG_URL || "http://localhost:4006";
+const configClient = new HttpClient(CONFIG_URL);
+
+let cachedRules: RiskRule[] = [];
+let lastCacheTime = 0;
+const CACHE_TTL = 60000;
+
+async function getRiskRules(): Promise<RiskRule[]> {
+  if (Date.now() - lastCacheTime < CACHE_TTL && cachedRules.length > 0) {
+    return cachedRules;
+  }
+
+  try {
+    // In a real scenario, use service key for internal auth
+    // Check http client support for headers or modify here
+    // For now, assuming internal network trust or modify http package later
+    // But wait, HttpClient usually wraps fetch.
+    // We need to pass headers. The @repo/http implementation is simple.
+    // Let's assume standard fetch for now if HttpClient doesn't support headers easily without instance config.
+    // Actually, let's look at HttpClient usage pattern or just use fetch directly for simplicity here.
+
+    const response = await fetch(`${CONFIG_URL}/risk-rules`, {
+      headers: {
+        "x-service-key": process.env.SERVICE_KEY || "dev-service-key",
+      },
+    });
+
+    if (response.ok) {
+      const rules = (await response.json()) as any[];
+      cachedRules = rules.map((r) => ({
+        name: r.name,
+        weight: r.weight,
+        conditionJson: r.conditionJson,
+      }));
+      lastCacheTime = Date.now();
+      return cachedRules;
+    }
+  } catch (e) {
+    console.error("Failed to fetch risk rules, using fallback/cache", e);
+  }
+
+  return cachedRules;
+}
 
 const fastify = Fastify({
   logger: {
@@ -78,6 +123,11 @@ fastify.get("/metrics", async () => {
   };
 });
 
+fastify.get("/risk/config", async () => {
+  const rules = await getRiskRules();
+  return { rules, source: lastCacheTime > 0 ? "config-service" : "fallback" };
+});
+
 fastify.post("/risk/score", async (request, reply) => {
   const { userId, productId, amount } = request.body as {
     userId: string;
@@ -96,11 +146,17 @@ fastify.post("/risk/score", async (request, reply) => {
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
-  const { decision, riskScore, reasons } = calculateRiskScore({
-    amount,
-    recentTxns,
-    userCreatedAt: user?.createdAt,
-  });
+  // Fetch Rules
+  const rules = await getRiskRules();
+
+  const { decision, riskScore, reasons } = calculateRiskScore(
+    {
+      amount,
+      recentTxns,
+      userCreatedAt: user?.createdAt,
+    },
+    rules,
+  );
 
   return {
     decision,

@@ -3,42 +3,54 @@ import { calculateRiskScore } from "./logic";
 
 describe("calculateRiskScore", () => {
   it("increases score for high transaction value", () => {
-    const { riskScore, reasons } = calculateRiskScore({
-      amount: 250000,
-      recentTxns: 0,
-      userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // Old account
-    });
+    const { riskScore, reasons } = calculateRiskScore(
+      {
+        amount: 250000,
+        recentTxns: 0,
+        userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // Old account
+      },
+      [],
+    );
     expect(riskScore).toBe(25);
     expect(reasons).toContain("High Transaction Value");
   });
 
   it("increases score for high velocity", () => {
-    const { riskScore, reasons } = calculateRiskScore({
-      amount: 1000,
-      recentTxns: 4,
-      userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    });
+    const { riskScore, reasons } = calculateRiskScore(
+      {
+        amount: 1000,
+        recentTxns: 4,
+        userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      },
+      [],
+    );
     expect(riskScore).toBe(30);
     expect(reasons).toContain("High Purchase Velocity");
   });
 
   it("increases score for new accounts", () => {
-    const { riskScore, reasons } = calculateRiskScore({
-      amount: 1000,
-      recentTxns: 0,
-      userCreatedAt: new Date(), // Just created
-    });
+    const { riskScore, reasons } = calculateRiskScore(
+      {
+        amount: 1000,
+        recentTxns: 0,
+        userCreatedAt: new Date(), // Just created
+      },
+      [],
+    );
     expect(riskScore).toBe(15);
     expect(reasons).toContain("New Account");
   });
 
   it("combines scores correctly", () => {
     // High Amount (25) + Velocity (30) = 55 -> CHALLENGE (>40)
-    const { riskScore, decision } = calculateRiskScore({
-      amount: 250000,
-      recentTxns: 4,
-      userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    });
+    const { riskScore, decision } = calculateRiskScore(
+      {
+        amount: 250000,
+        recentTxns: 4,
+        userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      },
+      [],
+    );
     expect(riskScore).toBe(55);
     expect(decision).toBe("CHALLENGE");
   });
@@ -50,11 +62,14 @@ describe("calculateRiskScore", () => {
 
     // I cannot reach > 80 with current logic.
     // I should test that it returns ALLOW for low score.
-    const { decision } = calculateRiskScore({
-      amount: 100,
-      recentTxns: 0,
-      userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    });
+    const { decision } = calculateRiskScore(
+      {
+        amount: 100,
+        recentTxns: 0,
+        userCreatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      },
+      [],
+    );
     expect(decision).toBe("ALLOW");
   });
 });

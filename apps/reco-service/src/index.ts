@@ -105,6 +105,36 @@ fastify.get("/metrics", async () => {
   };
 });
 
+// Config Fetching
+import { RecoWeights, DEFAULT_WEIGHTS } from "./config";
+
+let cachedWeights: RecoWeights = DEFAULT_WEIGHTS;
+let lastWeightCache = 0;
+const WEIGHT_CACHE_TTL = 60000;
+const CONFIG_URL = process.env.CONFIG_URL || "http://localhost:4006";
+
+async function getWeights(): Promise<RecoWeights> {
+  if (Date.now() - lastWeightCache < WEIGHT_CACHE_TTL) return cachedWeights;
+
+  try {
+    const response = await fetch(`${CONFIG_URL}/configs/reco.weights`, {
+      headers: {
+        "x-service-key": process.env.SERVICE_KEY || "dev-service-key",
+      },
+    });
+    if (response.ok) {
+      const data = (await response.json()) as any;
+      if (data && data.valueJson) {
+        cachedWeights = { ...DEFAULT_WEIGHTS, ...data.valueJson };
+        lastWeightCache = Date.now();
+      }
+    }
+  } catch (e) {
+    console.error("Config fetch failed", e);
+  }
+  return cachedWeights;
+}
+
 fastify.get("/recommendations/:productId", async (request, reply) => {
   const { productId } = request.params as { productId: string };
   const { userId } = request.query as { userId?: string };
@@ -161,6 +191,8 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
       : Promise.resolve([]),
   ]);
 
+  const weights = await getWeights();
+
   const scored = candidates.map((p) => {
     // Calculate Features
     const categoryMatch = p.category === currentProduct.category ? 1 : 0;
@@ -169,10 +201,11 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
     const productEvents = recentEvents.filter((e) => e.productId === p.id);
     let trendingVal = 0;
     productEvents.forEach((e) => {
-      if (e.type === "VIEW") trendingVal += 0.2;
-      if (e.type === "CLICK") trendingVal += 0.6;
-      if (e.type === "CART") trendingVal += 2.0;
-      if (e.type === "PURCHASE") trendingVal += 5.0;
+      if (e.type === "VIEW") trendingVal += weights.trendingWeights.VIEW;
+      if (e.type === "CLICK") trendingVal += weights.trendingWeights.CLICK;
+      if (e.type === "CART") trendingVal += weights.trendingWeights.CART;
+      if (e.type === "PURCHASE")
+        trendingVal += weights.trendingWeights.PURCHASE;
     });
     const trendingScore = Math.min(trendingVal, 10) / 10; // Normalize 0-1
 

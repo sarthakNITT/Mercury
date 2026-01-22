@@ -138,9 +138,24 @@ services:
       - reco-service
       - risk-service
       - payments-service
+      - config-service
     networks:
       - internal
       - public
+
+  config-service:
+    build:
+      context: .
+      dockerfile: apps/config-service/Dockerfile
+    restart: always
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/lavapunk_db
+      PORT: 4006
+      SERVICE_KEY: ${SERVICE_KEY:-production-service-key}
+    depends_on:
+      - postgres
+    networks:
+      - internal
 
   web:
     build:

@@ -66,3 +66,30 @@ model StripeWebhookEvent {
   stripeEventId String   @unique
   createdAt     DateTime @default(now())
 }
+
+model AppConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  valueJson Json
+  updatedAt DateTime @updatedAt
+}
+
+model ModelRegistry {
+  id        String   @id @default(cuid())
+  name      String
+  version   String
+  status    String   // ACTIVE, ARCHIVED
+  modelPath String?
+  modelJson Json?
+  createdAt DateTime @default(now())
+}
+
+model RiskRule {
+  id            String   @id @default(cuid())
+  name          String
+  enabled       Boolean  @default(true)
+  weight        Int
+  conditionJson Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

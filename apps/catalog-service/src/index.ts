@@ -131,12 +131,61 @@ fastify.post("/seed", async (request, reply) => {
     }
 
     // Transaction
-    await prisma.$transaction(
-      productsData.map((p) => prisma.product.create({ data: p })),
-    );
+    await prisma.$transaction([
+      ...productsData.map((p) => prisma.product.create({ data: p })),
+      // Seed Configs
+      prisma.appConfig.upsert({
+        where: { key: "reco.weights" },
+        update: {},
+        create: {
+          key: "reco.weights",
+          valueJson: {
+            categoryBoost: 0,
+            trendingWeights: {
+              VIEW: 0.2,
+              CLICK: 0.6,
+              CART: 2.0,
+              PURCHASE: 5.0,
+            },
+            affinityBoost: 0,
+          },
+        },
+      }),
+      // Seed Risk Rules
+      prisma.riskRule.create({
+        data: {
+          name: "High Amount",
+          weight: 25,
+          conditionJson: { minAmount: 200000 },
+        },
+      }),
+      prisma.riskRule.create({
+        data: {
+          name: "High Velocity",
+          weight: 30,
+          conditionJson: { minVelocity: 3 },
+        },
+      }),
+      prisma.riskRule.create({
+        data: {
+          name: "New Account",
+          weight: 15,
+          conditionJson: { isNewAccount: true },
+        },
+      }),
+      // Seed Model Registry
+      prisma.modelRegistry.create({
+        data: {
+          name: "reco-tf",
+          version: "v1",
+          status: "ACTIVE",
+          modelPath: "file://local/model.json",
+        },
+      }),
+    ]);
 
     return {
-      message: `Seeded users and ${count} products`,
+      message: `Seeded users, ${count} products, and default configs.`,
       users: [user1.id, user2.id],
     };
   } catch (e: any) {
