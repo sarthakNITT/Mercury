@@ -111,7 +111,7 @@ export default function AdminProducts() {
         const d = await res.json();
         setError(d.error || "Failed");
       }
-    } catch (e) {
+    } catch {
       setError("Error creating product");
     }
   };
@@ -124,7 +124,7 @@ export default function AdminProducts() {
         headers: { "x-service-key": "dev-service-key" },
       });
       fetchProducts(page);
-    } catch (e) {
+    } catch {
       alert("Error deleting");
     }
   };

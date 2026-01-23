@@ -52,7 +52,7 @@ export default function AdminUsers() {
         const d = await res.json();
         setError(d.error || "Failed");
       }
-    } catch (e) {
+    } catch {
       setError("Error creating user");
     }
   };

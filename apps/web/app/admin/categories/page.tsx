@@ -50,7 +50,7 @@ export default function AdminCategories() {
         const d = await res.json();
         setError(d.error || "Failed");
       }
-    } catch (e) {
+    } catch {
       setError("Error creating category");
     }
   };
@@ -68,7 +68,7 @@ export default function AdminCategories() {
         const d = await res.json();
         alert(d.error || "Failed");
       }
-    } catch (e) {
+    } catch {
       alert("Error deleting category");
     }
   };

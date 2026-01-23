@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -14,7 +13,6 @@ interface User {
 export default function Navbar() {
   const [users, setUsers] = useState<User[]>([]);
   const [activeUserId, setActiveUserId] = useState<string>("");
-  const pathname = usePathname();
 
   useEffect(() => {
     // Load active user
