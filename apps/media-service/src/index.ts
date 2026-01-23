@@ -79,7 +79,12 @@ fastify.get("/health", async () => ({
   service: "media-service",
 }));
 fastify.get("/ready", async () => ({ status: "ok" }));
-fastify.get("/metrics", async () => ({ status: "ok" })); // Prometheus later
+fastify.get("/metrics", async () => ({ status: "ok" }));
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
+});
 
 const start = async () => {
   try {

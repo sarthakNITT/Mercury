@@ -75,6 +75,12 @@ fastify.get("/risk-rules", async () => {
   return await prisma.riskRule.findMany({ where: { enabled: true } });
 });
 
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
+});
+
 fastify.post("/risk-rules", async (request, reply) => {
   const RiskRuleSchema = z.object({
     name: z.string(),

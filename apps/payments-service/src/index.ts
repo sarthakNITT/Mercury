@@ -80,6 +80,12 @@ fastify.get("/metrics", async () => {
     requestsTotal: requestCount,
   };
 });
+
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
+});
 // Import centralized stripe instance
 import { stripe } from "./stripe";
 import { prisma } from "@repo/db";

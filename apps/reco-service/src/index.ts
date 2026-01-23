@@ -105,6 +105,12 @@ fastify.get("/metrics", async () => {
   };
 });
 
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
+});
+
 // Config Fetching
 import { RecoWeights, DEFAULT_WEIGHTS } from "./config";
 import path from "path";

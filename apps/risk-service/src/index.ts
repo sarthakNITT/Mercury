@@ -123,6 +123,12 @@ fastify.get("/metrics", async () => {
   };
 });
 
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
+});
+
 fastify.get("/risk/config", async () => {
   const rules = await getRiskRules();
   return { rules, source: lastCacheTime > 0 ? "config-service" : "fallback" };
