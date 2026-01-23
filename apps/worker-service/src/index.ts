@@ -38,26 +38,40 @@ async function main() {
     }
   }
 
+  // Metric: Stream Lag
+  const { register, Gauge } = await import("prom-client");
+  const lagGauge = new Gauge({
+    name: "mercury_worker_stream_lag",
+    help: "Approximate stream length",
+  });
+
+  const BATCH_SIZE = parseInt(process.env.WORKER_BATCH_SIZE || "50");
+  const BLOCK_MS = parseInt(process.env.WORKER_BLOCK_MS || "5000");
+
   console.log(`Worker ${CONSUMER_NAME} started listening on ${STREAM_KEY}`);
 
   while (true) {
     try {
+      // Update Lag Metric
+      const len = await redis.xlen(STREAM_KEY);
+      lagGauge.set(len);
+
       // Read from stream
       const response = await redis.xreadgroup(
         "GROUP",
         GROUP_NAME,
         CONSUMER_NAME,
         "COUNT",
-        20,
+        BATCH_SIZE,
         "BLOCK",
-        5000,
+        BLOCK_MS,
         "STREAMS",
         STREAM_KEY,
         ">",
       );
 
       if (response && (response as any).length > 0) {
-        const [_, messages] = (response as any)[0]; // response is [[stream, [[id, [field, value, ...]]]]]
+        const [_, messages] = (response as any)[0];
 
         for (const message of messages) {
           const id = message[0];
@@ -68,8 +82,13 @@ async function main() {
             event[fields[i]] = fields[i + 1];
           }
 
-          await processEvent(event);
-          await redis.xack(STREAM_KEY, GROUP_NAME, id);
+          try {
+            await processEvent(event);
+            await redis.xack(STREAM_KEY, GROUP_NAME, id);
+          } catch (processErr) {
+            console.error(`Failed to process event ${id}:`, processErr);
+            // Do NOT XACK, so it remains in PEL for potential retry/claim
+          }
         }
       }
     } catch (err) {

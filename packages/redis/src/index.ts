@@ -42,3 +42,56 @@ export const getRedis = (): Redis => {
 };
 
 export const isRedisAvailable = () => isAvailable;
+
+// --- Caching Helpers ---
+
+export async function cacheGetJson<T>(key: string): Promise<T | null> {
+  if (!isRedisAvailable()) return null;
+  try {
+    const data = await getRedis().get(key);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function cacheSetJson(
+  key: string,
+  value: any,
+  ttlSeconds: number,
+): Promise<void> {
+  if (!isRedisAvailable()) return;
+  try {
+    await getRedis().setex(key, ttlSeconds, JSON.stringify(value));
+  } catch (e) {
+    // ignore
+  }
+}
+
+export async function cacheDel(key: string): Promise<void> {
+  if (!isRedisAvailable()) return;
+  try {
+    await getRedis().del(key);
+  } catch (e) {
+    // ignore
+  }
+}
+
+export async function cacheScanDel(prefix: string): Promise<void> {
+  if (!isRedisAvailable()) return;
+  const redis = getRedis();
+  const stream = redis.scanStream({ match: `${prefix}*`, count: 100 });
+
+  stream.on("data", (keys: string[]) => {
+    if (keys.length) {
+      const pipeline = redis.pipeline();
+      keys.forEach((key) => pipeline.del(key));
+      pipeline.exec().catch(() => {});
+    }
+  });
+
+  return new Promise((resolve) => {
+    stream.on("end", resolve);
+    stream.on("error", resolve); // Don't crash
+  });
+}

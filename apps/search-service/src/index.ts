@@ -1,7 +1,12 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Client } from "@elastic/elasticsearch";
-import { getRedis } from "@repo/redis";
+import {
+  getRedis,
+  cacheGetJson,
+  cacheSetJson,
+  cacheScanDel,
+} from "@repo/redis";
 import { setupMetrics, metricsHandler, metrics } from "@repo/shared";
 setupMetrics("search-service");
 
@@ -127,9 +132,11 @@ async function consumeLoop() {
                 createdAt: product.createdAt,
               },
             });
+            await cacheScanDel("search:products");
           } else if (data.type === "PRODUCT_DELETED") {
             const { id } = JSON.parse(data.payload || "{}");
             await esClient.delete({ index: "products", id }).catch(() => {});
+            await cacheScanDel("search:products");
           }
 
           await redis.xack(STREAM_KEY, GROUP_NAME, id);
@@ -146,6 +153,13 @@ fastify.get("/search/products", async (request, reply) => {
   const { q } = request.query as { q: string };
   if (!q) return { items: [] };
 
+  const CACHE_KEY = `search:products:${JSON.stringify(request.query)}`;
+  const cached = await cacheGetJson(CACHE_KEY);
+  if (cached) {
+    reply.header("x-cache", "HIT");
+    return cached;
+  }
+
   try {
     const result = await esClient.search({
       index: "products",
@@ -158,7 +172,10 @@ fastify.get("/search/products", async (request, reply) => {
     });
 
     const items = result.hits.hits.map((h) => h._source);
-    return { items, total: result.hits.total };
+    const response = { items, total: result.hits.total };
+    await cacheSetJson(CACHE_KEY, response, 30);
+    reply.header("x-cache", "MISS");
+    return response;
   } catch (e) {
     return { items: [], error: "Search failed" };
   }

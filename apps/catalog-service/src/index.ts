@@ -7,6 +7,13 @@ import {
   metricsHandler,
   metrics,
 } from "@repo/shared";
+import {
+  cacheGetJson,
+  cacheSetJson,
+  cacheDel,
+  cacheScanDel,
+} from "@repo/redis";
+
 setupMetrics("catalog-service");
 
 const fastify = Fastify({
@@ -99,10 +106,24 @@ fastify.get("/metrics/prometheus", metricsHandler);
 // --- CATEGORIES ---
 
 // Get Categories
-fastify.get("/categories", async () => {
-  return prisma.category.findMany({ orderBy: { name: "asc" } });
+// Get Categories
+fastify.get("/categories", async (request, reply) => {
+  const CACHE_KEY = "catalog:categories:all";
+  const cached = await cacheGetJson(CACHE_KEY);
+  if (cached) {
+    reply.header("x-cache", "HIT");
+    return cached;
+  }
+
+  const categories = await prisma.category.findMany({
+    orderBy: { name: "asc" },
+  });
+  await cacheSetJson(CACHE_KEY, categories, 300); // 5 min
+  reply.header("x-cache", "MISS");
+  return categories;
 });
 
+// Create Category
 // Create Category
 fastify.post("/categories", async (request, reply) => {
   // @ts-ignore
@@ -116,6 +137,9 @@ fastify.post("/categories", async (request, reply) => {
     const category = await prisma.category.create({
       data: { name: result.data.name },
     });
+    // Invalidate
+    await cacheDel("catalog:categories:all");
+    await cacheScanDel("catalog:products:list");
     return category;
   } catch (e: any) {
     if (e.code === "P2002") {
@@ -147,6 +171,9 @@ fastify.patch("/categories/:id", async (request, reply) => {
       where: { id },
       data: result.data,
     });
+    // Invalidate
+    await cacheDel("catalog:categories:all");
+    await cacheScanDel("catalog:products:list");
     return category;
   } catch (e) {
     return reply.code(404).send({ error: "Category not found" });
@@ -164,6 +191,9 @@ fastify.delete("/categories/:id", async (request, reply) => {
   }
   try {
     await prisma.category.delete({ where: { id } });
+    // Invalidate
+    await cacheDel("catalog:categories:all");
+    await cacheScanDel("catalog:products:list");
     return { ok: true };
   } catch (e) {
     return reply.code(404).send({ error: "Category not found" });
@@ -173,7 +203,16 @@ fastify.delete("/categories/:id", async (request, reply) => {
 // --- PRODUCTS ---
 
 // Get Products (Paginated + Filtered)
+// Get Products (Paginated + Filtered)
 fastify.get("/products", async (request, reply) => {
+  const query = request.query as any;
+  const CACHE_KEY = `catalog:products:list:${JSON.stringify(query)}`;
+  const cached = await cacheGetJson(CACHE_KEY);
+  if (cached) {
+    reply.header("x-cache", "HIT");
+    return cached;
+  }
+
   const {
     page = "1",
     pageSize = "20",
@@ -181,7 +220,7 @@ fastify.get("/products", async (request, reply) => {
     search,
     minPrice,
     maxPrice,
-  } = request.query as any;
+  } = query;
 
   const take = parseInt(pageSize);
   const skip = (parseInt(page) - 1) * take;
@@ -208,7 +247,7 @@ fastify.get("/products", async (request, reply) => {
     prisma.product.count({ where }),
   ]);
 
-  return {
+  const result = {
     data: products,
     pagination: {
       page: parseInt(page),
@@ -217,6 +256,10 @@ fastify.get("/products", async (request, reply) => {
       totalPages: Math.ceil(total / take),
     },
   };
+
+  await cacheSetJson(CACHE_KEY, result, 30); // 30s TTL
+  reply.header("x-cache", "MISS");
+  return result;
 });
 
 // Create Product
@@ -263,12 +306,23 @@ fastify.post("/products", async (request, reply) => {
     console.error("Redis Stream Error", e);
   }
 
+  // Invalidate
+  await cacheScanDel("catalog:products:list");
+
   return product;
 });
 
 // Get Product
+// Get Product
 fastify.get("/products/:id", async (request, reply) => {
   const { id } = request.params as { id: string };
+  const CACHE_KEY = `catalog:products:detail:${id}`;
+  const cached = await cacheGetJson(CACHE_KEY);
+  if (cached) {
+    reply.header("x-cache", "HIT");
+    return cached;
+  }
+
   const product = await prisma.product.findUnique({
     where: { id },
     include: { category: true },
@@ -277,6 +331,9 @@ fastify.get("/products/:id", async (request, reply) => {
     reply.code(404);
     return { error: "Product not found" };
   }
+
+  await cacheSetJson(CACHE_KEY, product, 60); // 60s
+  reply.header("x-cache", "MISS");
   return product;
 });
 
@@ -295,6 +352,10 @@ fastify.patch("/products/:id", async (request, reply) => {
       where: { id },
       data: result.data,
     });
+
+    // Invalidate
+    await cacheDel(`catalog:products:detail:${id}`);
+    await cacheScanDel("catalog:products:list");
 
     // Emit Redis Stream Event
     try {
@@ -337,6 +398,10 @@ fastify.delete("/products/:id", async (request, reply) => {
     } catch (e) {
       console.error("Redis Stream Error", e);
     }
+
+    // Invalidate
+    await cacheDel(`catalog:products:detail:${id}`);
+    await cacheScanDel("catalog:products:list");
 
     return { ok: true };
   } catch (e) {

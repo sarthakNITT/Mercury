@@ -23,6 +23,10 @@ model Product {
   // Relations
   category    Category @relation(fields: [categoryId], references: [id])
   events      Event[]
+
+  @@index([categoryId])
+  @@index([price])
+  @@index([createdAt])
 }
 
 model Category {
@@ -111,6 +115,8 @@ model Payment {
   stripeSessionId       String?  @unique
   stripePaymentIntentId String?  @unique
   createdAt             DateTime @default(now())
+
+  @@index([status])
 }
 
 model StripeWebhookEvent {

@@ -3,6 +3,8 @@ import cors from "@fastify/cors";
 import proxy from "@fastify/http-proxy";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import compress from "@fastify/compress";
+import etag from "@fastify/etag";
 import crypto from "node:crypto";
 import {
   EventBodySchema,
@@ -19,7 +21,23 @@ const fastify = Fastify({
 });
 
 // Security Headers
+// Security Headers
 fastify.register(helmet, { global: true });
+fastify.register(compress, { global: true });
+fastify.register(etag);
+
+// Cache Headers
+fastify.addHook("onSend", async (request, reply, payload) => {
+  if (request.method !== "GET") return payload;
+
+  const url = request.url;
+  if (url.startsWith("/products") || url.startsWith("/categories")) {
+    reply.header("Cache-Control", "public, max-age=10");
+  } else if (url.startsWith("/metrics")) {
+    reply.header("Cache-Control", "no-store");
+  }
+  return payload;
+});
 
 // Rate Limiting
 fastify.register(rateLimit, {
