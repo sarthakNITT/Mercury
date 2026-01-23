@@ -119,6 +119,47 @@ fastify.get("/model-registry/active", async (request, reply) => {
   return model;
 });
 
+fastify.post("/model-registry/activate", async (request, reply) => {
+  const ActivateSchema = z.object({
+    name: z.string(),
+    version: z.string(),
+    modelPath: z.string(),
+  });
+
+  const result = ActivateSchema.safeParse(request.body);
+  if (!result.success) {
+    reply.code(400);
+    return { error: result.error };
+  }
+
+  const { name, version, modelPath } = result.data;
+
+  // Deactivate others
+  await prisma.modelRegistry.updateMany({
+    where: { name, status: "ACTIVE" },
+    data: { status: "ARCHIVED" },
+  });
+
+  // Create or Update new one as ACTIVE
+  // We'll create a new entry for every training run usually, but here we just ensure this one is active.
+  // The prompt says "Call config-service endpoint to activate model", implying we might need to insert it if it doesn't exist,
+  // or just update it. Let's create a new record if it doesn't exist with these details, or update if it does.
+  // Actually, usually training service creates the record.
+  // "This trains a TF.js model... After training succeeds: Call config-service endpoint to activate model"
+  // Let's assume we just create a NEW record or update existing one to ACTIVE.
+
+  const model = await prisma.modelRegistry.create({
+    data: {
+      name,
+      version,
+      modelPath,
+      status: "ACTIVE",
+    },
+  });
+
+  return { success: true, model };
+});
+
 const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: "0.0.0.0" });

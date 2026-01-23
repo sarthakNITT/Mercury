@@ -267,6 +267,13 @@ registerProxy(fastify, {
   rewritePrefix: "/model-registry",
 });
 
+// 8. Training Service
+registerProxy(fastify, {
+  upstream: process.env.TRAINING_URL || "http://localhost:4007",
+  prefix: "/train",
+  rewritePrefix: "/train",
+});
+
 const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: "0.0.0.0" });

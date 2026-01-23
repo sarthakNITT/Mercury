@@ -107,11 +107,21 @@ fastify.get("/metrics", async () => {
 
 // Config Fetching
 import { RecoWeights, DEFAULT_WEIGHTS } from "./config";
+import path from "path";
 
 let cachedWeights: RecoWeights = DEFAULT_WEIGHTS;
 let lastWeightCache = 0;
 const WEIGHT_CACHE_TTL = 60000;
 const CONFIG_URL = process.env.CONFIG_URL || "http://localhost:4006";
+
+// Dynamic Model State
+let activeModel: tf.LayersModel | null = null;
+let activeModelMeta: {
+  name: string;
+  version: string;
+  modelPath: string;
+} | null = null;
+let lastLoadedAt: Date | null = null;
 
 async function getWeights(): Promise<RecoWeights> {
   if (Date.now() - lastWeightCache < WEIGHT_CACHE_TTL) return cachedWeights;
@@ -134,6 +144,62 @@ async function getWeights(): Promise<RecoWeights> {
   }
   return cachedWeights;
 }
+
+// Model Loading Logic
+async function checkAndLoadModel() {
+  try {
+    const response = await fetch(
+      `${CONFIG_URL}/model-registry/active?name=reco-tf`,
+      {
+        headers: {
+          "x-service-key": process.env.SERVICE_KEY || "dev-service-key",
+        },
+      },
+    );
+    if (!response.ok) return; // No active model or config service down
+
+    const modelMeta = (await response.json()) as any;
+
+    // Check if changed
+    if (
+      activeModelMeta &&
+      activeModelMeta.version === modelMeta.version &&
+      activeModelMeta.name === modelMeta.name
+    ) {
+      return; // No change
+    }
+
+    console.log(
+      `Loading new model: ${modelMeta.name}:${modelMeta.version} from ${modelMeta.modelPath}`,
+    );
+
+    // Path handling
+    // modelPath stored is relative "models/reco-tf/v1/model.json"
+    // We need absolute path.
+    const absolutePath = path.resolve(__dirname, "..", modelMeta.modelPath);
+
+    const loaded = await tf.loadLayersModel(`file://${absolutePath}`);
+    activeModel = loaded;
+    activeModelMeta = modelMeta;
+    lastLoadedAt = new Date();
+    console.log("Model loaded successfully");
+  } catch (e) {
+    console.error("Failed to load model", e);
+  }
+}
+
+// Initial Load & Loop
+checkAndLoadModel();
+setInterval(checkAndLoadModel, 60000);
+
+fastify.get("/reco/model/status", async () => {
+  return {
+    activeModel: activeModelMeta,
+    loaded: !!activeModel,
+    lastLoadedAt,
+    fallbackActive: !activeModel,
+  };
+});
 
 fastify.get("/recommendations/:productId", async (request, reply) => {
   const { productId } = request.params as { productId: string };
@@ -193,11 +259,13 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
 
   const weights = await getWeights();
 
-  const scored = candidates.map((p) => {
-    // Calculate Features
+  // Prepare batch input for TF if active
+  // features: [categoryMatch, trendingScore, affinity, priceBucket]
+  // We need to construct the feature array for all candidates first
+
+  const candidatesWithFeatures = candidates.map((p) => {
     const categoryMatch = p.category === currentProduct.category ? 1 : 0;
 
-    // Check trending score
     const productEvents = recentEvents.filter((e) => e.productId === p.id);
     let trendingVal = 0;
     productEvents.forEach((e) => {
@@ -207,20 +275,54 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
       if (e.type === "PURCHASE")
         trendingVal += weights.trendingWeights.PURCHASE;
     });
-    const trendingScore = Math.min(trendingVal, 10) / 10; // Normalize 0-1
+    const trendingScore = Math.min(trendingVal, 10) / 10;
 
-    // User affinity
     const userAffinity = userHistory.some((e) => e.productId === p.id) ? 1 : 0;
-
-    // Price bucket (Normalized around base price)
     const priceBucket = Math.min(p.price / (currentProduct.price || 1), 2) / 2;
 
-    const features = [categoryMatch, trendingScore, userAffinity, priceBucket];
+    return {
+      product: p,
+      features: [categoryMatch, trendingScore, userAffinity, priceBucket],
+      reasons: [] as string[],
+      categoryMatch,
+      trendingScore,
+      userAffinity,
+      priceBucket,
+    };
+  });
 
-    // Run Inference
-    const tfScore = predictScore(features);
+  let scores: number[] = [];
 
-    // Construct reasons directly from factors
+  if (activeModel) {
+    // Batch Predict
+    try {
+      const inputTensor = tf.tensor2d(
+        candidatesWithFeatures.map((c) => c.features),
+      );
+      const prediction = activeModel.predict(inputTensor) as tf.Tensor;
+      const data = prediction.dataSync(); // Float32Array
+      scores = Array.from(data).map((s) => s * 100); // Scale 0-1 to 0-100 for consistency
+      inputTensor.dispose();
+      prediction.dispose();
+    } catch (e) {
+      console.error("TF Inference Failed, fallback", e);
+      // Fallback handled below (scores empty)
+    }
+  }
+
+  if (scores.length === 0) {
+    // Fallback
+    scores = candidatesWithFeatures.map((c) => predictScore(c.features));
+    if (activeModel)
+      console.warn(
+        "Used fallback scoring despite active model (inference error?)",
+      );
+  }
+
+  const scored = candidatesWithFeatures.map((item, idx) => {
+    const tfScore = scores[idx] ?? 0;
+    const { categoryMatch, trendingScore, userAffinity } = item;
+
     const reasons: string[] = [];
     if (categoryMatch) reasons.push("Similar Category");
     if (trendingScore > 0.3) reasons.push("Trending");
@@ -228,10 +330,16 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
     if (tfScore > 75) reasons.push("High Match Score");
 
     return {
-      ...p,
+      ...item.product,
       score: tfScore,
       reasons,
-      scoreBreakdown: { tfScore, trendingScore, categoryMatch },
+      scoreBreakdown: {
+        tfScore,
+        trendingScore,
+        categoryMatch,
+        affinityScore: userAffinity,
+        priceBucket: item.priceBucket,
+      },
     };
   });
 
@@ -245,6 +353,7 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
     imageUrl: p.imageUrl,
     score: parseFloat(p.score.toFixed(2)),
     reason: p.reasons.join(", ") || "Popular",
+    scoreBreakdown: p.scoreBreakdown, // exposing for debugging/proof
   }));
 
   const result = { productId, recommendations: topRecommendations };
