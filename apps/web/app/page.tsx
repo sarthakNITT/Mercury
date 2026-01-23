@@ -41,6 +41,17 @@ export default function Home() {
       </div>
 
       <div className="grid">
+        {products.length === 0 && !loading && (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500 mb-4">No products found.</p>
+            <Link
+              href="/admin/products"
+              className="text-blue-600 hover:underline"
+            >
+              Go to Admin to create products from scratch &rarr;
+            </Link>
+          </div>
+        )}
         {products.map((product) => (
           <Link
             href={`/products/${product.id}`}

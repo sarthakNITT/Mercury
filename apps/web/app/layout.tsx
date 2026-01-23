@@ -1,11 +1,13 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import './globals.css';
+import type { Metadata } from "next";
+import Link from "next/link";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Mercury Market Force',
-  description: 'Real-time marketplace intelligence demo',
+  title: "Mercury Market Force",
+  description: "Real-time marketplace intelligence demo",
 };
+
+import Navbar from "../components/Navbar";
 
 export default function RootLayout({
   children,
@@ -16,20 +18,8 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <div className="container">
-          <header className="header">
-            <nav className="nav">
-              <Link href="/" style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                Mercury 🚀
-              </Link>
-              <ul>
-                <li><Link href="/">Marketplace</Link></li>
-                <li><Link href="/dashboard">Live Dashboard</Link></li>
-              </ul>
-            </nav>
-          </header>
-          <main>
-            {children}
-          </main>
+          <Navbar />
+          <main>{children}</main>
         </div>
       </body>
     </html>

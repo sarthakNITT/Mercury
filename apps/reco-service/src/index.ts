@@ -264,7 +264,7 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
   // We need to construct the feature array for all candidates first
 
   const candidatesWithFeatures = candidates.map((p) => {
-    const categoryMatch = p.category === currentProduct.category ? 1 : 0;
+    const categoryMatch = p.categoryId === currentProduct.categoryId ? 1 : 0;
 
     const productEvents = recentEvents.filter((e) => e.productId === p.id);
     let trendingVal = 0;
@@ -349,7 +349,7 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
     name: p.name,
     price: p.price,
     currency: p.currency,
-    category: p.category,
+    categoryId: p.categoryId,
     imageUrl: p.imageUrl,
     score: parseFloat(p.score.toFixed(2)),
     reason: p.reasons.join(", ") || "Popular",

@@ -131,7 +131,21 @@ fastify.get("/metrics", async () => {
 fastify.addHook("preHandler", async (request, reply) => {
   const { url, method } = request;
 
-  if (method === "POST") {
+  if (method === "POST" || method === "PATCH") {
+    // Import Schemas dynamically to avoid load-time issues if shared isn't ready
+    // @ts-ignore
+    const {
+      CheckoutSessionSchema,
+      RiskScoreSchema,
+      EventBodySchema,
+      ProductCreateSchema,
+      ProductUpdateSchema,
+      CategoryCreateSchema,
+      CategoryUpdateSchema,
+      UserCreateSchema,
+      UserUpdateSchema,
+    } = await import("@repo/shared");
+
     if (url === "/checkout/create-session") {
       const result = CheckoutSessionSchema.safeParse(request.body);
       if (!result.success) {
@@ -168,6 +182,35 @@ fastify.addHook("preHandler", async (request, reply) => {
         });
         return request;
       }
+    } else if (url.startsWith("/products")) {
+      const schema =
+        method === "POST" ? ProductCreateSchema : ProductUpdateSchema;
+      const result = schema.safeParse(request.body);
+      if (!result.success) {
+        reply
+          .code(400)
+          .send({ error: "Validation Failed", details: result.error.issues });
+        return request;
+      }
+    } else if (url.startsWith("/categories")) {
+      const schema =
+        method === "POST" ? CategoryCreateSchema : CategoryUpdateSchema;
+      const result = schema.safeParse(request.body);
+      if (!result.success) {
+        reply
+          .code(400)
+          .send({ error: "Validation Failed", details: result.error.issues });
+        return request;
+      }
+    } else if (url.startsWith("/users")) {
+      const schema = method === "POST" ? UserCreateSchema : UserUpdateSchema;
+      const result = schema.safeParse(request.body);
+      if (!result.success) {
+        reply
+          .code(400)
+          .send({ error: "Validation Failed", details: result.error.issues });
+        return request;
+      }
     }
   }
 });
@@ -185,6 +228,18 @@ registerProxy(fastify, {
   upstream: SERVICES.catalog,
   prefix: "/seed",
   rewritePrefix: "/seed",
+});
+
+registerProxy(fastify, {
+  upstream: SERVICES.catalog,
+  prefix: "/categories",
+  rewritePrefix: "/categories",
+});
+
+registerProxy(fastify, {
+  upstream: SERVICES.events, // Users are in events-service
+  prefix: "/users",
+  rewritePrefix: "/users",
 });
 
 // 2. Events Service (SSE)

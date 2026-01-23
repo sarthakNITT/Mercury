@@ -6,13 +6,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 function getUserId() {
-  if (typeof window === "undefined") return "unknown-user";
-  let id = localStorage.getItem("mercury_user_id");
-  if (!id) {
-    id = "user_" + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem("mercury_user_id", id);
-  }
-  return id;
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("mercury.activeUserId");
 }
 
 export default function ProductPage({
@@ -39,16 +34,19 @@ export default function ProductPage({
       .getProduct(id)
       .then((p) => {
         setProduct(p);
-        // Track VIEW event
-        api.trackEvent(userId, "VIEW", id, { source: "product_page" });
 
-        // Fetch recommendations
-        api
-          .getRecommendations(id, userId)
-          .then((res) => setRecommendations(res.recommendations))
-          .catch(console.error);
+        if (userId) {
+          // Track VIEW event
+          api.trackEvent(userId, "VIEW", id, { source: "product_page" });
 
-        // Check trending
+          // Fetch recommendations
+          api
+            .getRecommendations(id, userId)
+            .then((res) => setRecommendations(res.recommendations))
+            .catch(console.error);
+        }
+
+        // Check trending (Global)
         api
           .getTrending(20)
           .then((res) => {
@@ -67,6 +65,11 @@ export default function ProductPage({
   const handleAction = async (type: string) => {
     if (!product) return;
     const userId = getUserId();
+
+    if (!userId) {
+      alert("Please select an Active User from the navbar first.");
+      return;
+    }
 
     if (type === "PURCHASE") {
       try {
@@ -111,10 +114,12 @@ export default function ProductPage({
     }
 
     // Optimistic UI or just fire and forget
-    await api.trackEvent(userId, type, product.id, {
-      price: product.price,
-      currency: product.currency,
-    });
+    if (userId) {
+      await api.trackEvent(userId, type, product.id, {
+        price: product.price,
+        currency: product.currency,
+      });
+    }
 
     if (type === "CART") alert("Added to cart!");
   };

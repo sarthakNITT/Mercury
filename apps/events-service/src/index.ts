@@ -140,6 +140,48 @@ fastify.get("/events/stream", (request, reply) => {
   });
 });
 
+// --- USERS ---
+
+// Get Users
+fastify.get("/users", async () => {
+  return prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+});
+
+// Create User
+fastify.post("/users", async (request, reply) => {
+  // @ts-ignore
+  const { UserCreateSchema } = await import("@repo/shared");
+  const result = UserCreateSchema.safeParse(request.body);
+  if (!result.success) {
+    reply.code(400);
+    return { error: "Validation failed", details: result.error.issues };
+  }
+
+  try {
+    const user = await prisma.user.create({
+      data: result.data,
+    });
+    return user;
+  } catch (e: any) {
+    if (e.code === "P2002") {
+      reply.code(409).send({ error: "Email already exists" });
+      return;
+    }
+    throw e;
+  }
+});
+
+// Get User by ID
+fastify.get("/users/:id", async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) {
+    reply.code(404);
+    return { error: "User not found" };
+  }
+  return user;
+});
+
 // Create Event
 fastify.post("/events", async (request, reply) => {
   const result = EventBodySchema.safeParse(request.body);

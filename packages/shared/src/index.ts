@@ -40,3 +40,40 @@ export const CheckoutSessionSchema = z.object({
   userId: z.string().optional(),
 });
 export type CheckoutSessionInput = z.infer<typeof CheckoutSessionSchema>;
+
+// --- NEW SCHEMAS FOR PHASE D3 ---
+
+// Category
+export const CategoryCreateSchema = z.object({
+  name: z.string().min(1),
+});
+export type CategoryCreateInput = z.infer<typeof CategoryCreateSchema>;
+
+export const CategoryUpdateSchema = z.object({
+  name: z.string().min(1).optional(),
+});
+export type CategoryUpdateInput = z.infer<typeof CategoryUpdateSchema>;
+
+// Product
+export const ProductCreateSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  categoryId: z.string().min(1),
+  price: z.number().int().positive(),
+  imageUrl: z.string().optional(),
+  stock: z.number().int().nonnegative().optional(),
+});
+export type ProductCreateInput = z.infer<typeof ProductCreateSchema>;
+
+export const ProductUpdateSchema = ProductCreateSchema.partial();
+export type ProductUpdateInput = z.infer<typeof ProductUpdateSchema>;
+
+// User
+export const UserCreateSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+});
+export type UserCreateInput = z.infer<typeof UserCreateSchema>;
+
+export const UserUpdateSchema = UserCreateSchema.partial();
+export type UserUpdateInput = z.infer<typeof UserUpdateSchema>;

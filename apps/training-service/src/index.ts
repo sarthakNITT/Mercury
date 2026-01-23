@@ -196,7 +196,7 @@ async function runTraining(name: string, version: string) {
       // Features
       // 1. Category Match
       const categoryMatch =
-        contextProduct.category === targetProduct.category ? 1 : 0;
+        contextProduct.categoryId === targetProduct.categoryId ? 1 : 0;
 
       // 2. Trending Score
       const trendingScore =
@@ -209,7 +209,7 @@ async function runTraining(name: string, version: string) {
       // Using `userHistory` map which we update as we iterate (temporal leak prevention)
       const affinity =
         userHistory.get(userId)?.has(targetProduct.id) ||
-        userHistory.get(userId)?.has(targetProduct.category)
+        userHistory.get(userId)?.has(targetProduct.categoryId)
           ? 1
           : 0;
 
@@ -233,7 +233,7 @@ async function runTraining(name: string, version: string) {
       // Update History
       if (!userHistory.has(userId)) userHistory.set(userId, new Set());
       userHistory.get(userId)!.add(targetProduct.id);
-      userHistory.get(userId)!.add(targetProduct.category);
+      userHistory.get(userId)!.add(targetProduct.categoryId);
     }
   }
 

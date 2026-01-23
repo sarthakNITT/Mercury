@@ -83,19 +83,166 @@ fastify.get("/metrics", async () => {
   };
 });
 
-// Get Products
-fastify.get("/products", async (request, reply) => {
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  return products;
+// --- CATEGORIES ---
+
+// Get Categories
+fastify.get("/categories", async () => {
+  return prisma.category.findMany({ orderBy: { name: "asc" } });
 });
 
-// Get Product by ID
+// Create Category
+fastify.post("/categories", async (request, reply) => {
+  // @ts-ignore
+  const { CategoryCreateSchema } = await import("@repo/shared");
+  const result = CategoryCreateSchema.safeParse(request.body);
+  if (!result.success) {
+    reply.code(400);
+    return { error: "Validation failed", details: result.error.issues };
+  }
+  try {
+    const category = await prisma.category.create({
+      data: { name: result.data.name },
+    });
+    return category;
+  } catch (e: any) {
+    if (e.code === "P2002") {
+      reply.code(409).send({ error: "Category already exists" });
+      return;
+    }
+    throw e;
+  }
+});
+
+fastify.get("/categories/:id", async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const category = await prisma.category.findUnique({ where: { id } });
+  if (!category) return reply.code(404).send({ error: "Category not found" });
+  return category;
+});
+
+fastify.patch("/categories/:id", async (request, reply) => {
+  const { id } = request.params as { id: string };
+  // @ts-ignore
+  const { CategoryUpdateSchema } = await import("@repo/shared");
+  const result = CategoryUpdateSchema.safeParse(request.body);
+  if (!result.success) {
+    return reply.code(400).send({ error: "Validation failed" });
+  }
+
+  try {
+    const category = await prisma.category.update({
+      where: { id },
+      data: result.data,
+    });
+    return category;
+  } catch (e) {
+    return reply.code(404).send({ error: "Category not found" });
+  }
+});
+
+fastify.delete("/categories/:id", async (request, reply) => {
+  const { id } = request.params as { id: string };
+  // Check for products
+  const count = await prisma.product.count({ where: { categoryId: id } });
+  if (count > 0) {
+    return reply
+      .code(400)
+      .send({ error: "Cannot delete category with existing products" });
+  }
+  try {
+    await prisma.category.delete({ where: { id } });
+    return { ok: true };
+  } catch (e) {
+    return reply.code(404).send({ error: "Category not found" });
+  }
+});
+
+// --- PRODUCTS ---
+
+// Get Products (Paginated + Filtered)
+fastify.get("/products", async (request, reply) => {
+  const {
+    page = "1",
+    pageSize = "20",
+    categoryId,
+    search,
+    minPrice,
+    maxPrice,
+  } = request.query as any;
+
+  const take = parseInt(pageSize);
+  const skip = (parseInt(page) - 1) * take;
+
+  const where: any = {};
+  if (categoryId) where.categoryId = categoryId;
+  if (minPrice) where.price = { gte: parseInt(minPrice) };
+  if (maxPrice) where.price = { ...where.price, lte: parseInt(maxPrice) };
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      take,
+      skip,
+      orderBy: { createdAt: "desc" },
+      include: { category: true },
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return {
+    data: products,
+    pagination: {
+      page: parseInt(page),
+      pageSize: take,
+      total,
+      totalPages: Math.ceil(total / take),
+    },
+  };
+});
+
+// Create Product
+fastify.post("/products", async (request, reply) => {
+  // @ts-ignore
+  const { ProductCreateSchema } = await import("@repo/shared");
+  const result = ProductCreateSchema.safeParse(request.body);
+  if (!result.success) {
+    reply.code(400);
+    return { error: "Validation failed", details: result.error.issues };
+  }
+
+  // Validate category exists
+  const catExists = await prisma.category.findUnique({
+    where: { id: result.data.categoryId },
+  });
+  if (!catExists) {
+    return reply.code(400).send({ error: "Invalid categoryId" });
+  }
+
+  const product = await prisma.product.create({
+    data: {
+      name: result.data.name,
+      description: result.data.description || "",
+      price: result.data.price,
+      categoryId: result.data.categoryId,
+      imageUrl: result.data.imageUrl,
+      stock: result.data.stock || 0,
+    },
+  });
+  return product;
+});
+
+// Get Product
 fastify.get("/products/:id", async (request, reply) => {
   const { id } = request.params as { id: string };
   const product = await prisma.product.findUnique({
     where: { id },
+    include: { category: true },
   });
   if (!product) {
     reply.code(404);
@@ -104,29 +251,92 @@ fastify.get("/products/:id", async (request, reply) => {
   return product;
 });
 
-// Seed System (Users + Products)
+// Update Product
+fastify.patch("/products/:id", async (request, reply) => {
+  const { id } = request.params as { id: string };
+  // @ts-ignore
+  const { ProductUpdateSchema } = await import("@repo/shared");
+  const result = ProductUpdateSchema.safeParse(request.body);
+  if (!result.success) {
+    return reply.code(400).send({ error: "Validation failed" });
+  }
+
+  try {
+    const product = await prisma.product.update({
+      where: { id },
+      data: result.data,
+    });
+    return product;
+  } catch (e) {
+    return reply.code(404).send({ error: "Product not found" });
+  }
+});
+
+// Delete Product
+fastify.delete("/products/:id", async (request, reply) => {
+  const { id } = request.params as { id: string };
+  try {
+    await prisma.product.delete({ where: { id } });
+    return { ok: true };
+  } catch (e) {
+    return reply.code(404).send({ error: "Product not found" });
+  }
+});
+
+// Seed System (Updated for Relations)
 fastify.post("/seed", async (request, reply) => {
   try {
     const { count = 20 } = (request.body as { count?: number }) || {};
 
-    // 1. Create Users
-    const user1 = await prisma.user.create({ data: { name: "Alice Demo" } });
-    const user2 = await prisma.user.create({ data: { name: "Bob Shopper" } });
+    // 1. Create Categories
+    const categoriesList = [
+      "Electronics",
+      "Fashion",
+      "Books",
+      "Fitness",
+      "Home",
+    ];
+    const categoryMap: Record<string, string> = {};
 
-    // 2. Create Products
-    const categories = ["Electronics", "Fashion", "Books", "Fitness", "Home"];
+    for (const name of categoriesList) {
+      const cat = await prisma.category.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      });
+      categoryMap[name] = cat.id;
+    }
+
+    // 2. Create Users (with email)
+    const user1 = await prisma.user.upsert({
+      where: { email: "alice@demo.com" },
+      update: {},
+      create: { name: "Alice Demo", email: "alice@demo.com" },
+    });
+    const user2 = await prisma.user.upsert({
+      where: { email: "bob@shopper.com" },
+      update: {},
+      create: { name: "Bob Shopper", email: "bob@shopper.com" },
+    });
+
+    // 3. Create Products
     const productsData = [];
-
     for (let i = 1; i <= count; i++) {
-      const category =
-        categories[Math.floor(Math.random() * categories.length)] || "General";
+      const catName =
+        categoriesList[Math.floor(Math.random() * categoriesList.length)] ||
+        "Electronics";
+
+      const catId = categoryMap[catName];
+      if (!catId) continue; // Should not happen
+
       productsData.push({
-        name: `${category} Product ${i}`,
-        description: `Description for product ${i} in ${category}. Very high quality item.`,
+        name: `${catName} Product ${i}`,
+        description: `Description for product ${i} in ${catName}.`,
         price: Math.floor(Math.random() * 10000) + 500,
         currency: "INR",
-        category,
+        categoryId: catId,
         imageUrl: `https://placehold.co/400?text=Product+${i}`,
+        stock: 50,
       });
     }
 
@@ -151,76 +361,17 @@ fastify.post("/seed", async (request, reply) => {
           },
         },
       }),
-      // Seed Risk Rules
-      prisma.riskRule.create({
-        data: {
-          name: "High Amount",
-          weight: 25,
-          conditionJson: { minAmount: 200000 },
-        },
-      }),
-      prisma.riskRule.create({
-        data: {
-          name: "High Velocity",
-          weight: 30,
-          conditionJson: { minVelocity: 3 },
-        },
-      }),
-      prisma.riskRule.create({
-        data: {
-          name: "New Account",
-          weight: 15,
-          conditionJson: { isNewAccount: true },
-        },
-      }),
-      // Seed Model Registry
-      prisma.modelRegistry.create({
-        data: {
-          name: "reco-tf",
-          version: "v1",
-          status: "ACTIVE",
-          modelPath: "file://local/model.json",
-        },
-      }),
     ]);
 
     return {
-      message: `Seeded users, ${count} products, and default configs.`,
+      message: `Seeded users, categories, and ${count} products.`,
       users: [user1.id, user2.id],
     };
   } catch (e: any) {
     fastify.log.error(e);
-    reply.code(500).send({ error: e.message, stack: e.stack });
+    reply.code(500).send({ error: e.message });
     return;
   }
-});
-
-// Seed Products (Dev/Internal) - Keep for compatibility
-fastify.post("/seed/products", async (request, reply) => {
-  const { count = 20 } = (request.body as { count?: number }) || {};
-
-  const categories = ["Electronics", "Fashion", "Books", "Fitness", "Home"];
-  const productsData = [];
-
-  for (let i = 1; i <= count; i++) {
-    const category =
-      categories[Math.floor(Math.random() * categories.length)] || "General";
-    productsData.push({
-      name: `${category} Product ${i}`,
-      description: `Description for product ${i} in ${category}. Very high quality item.`,
-      price: Math.floor(Math.random() * 10000) + 500,
-      currency: "INR",
-      category,
-      imageUrl: `https://placehold.co/400?text=Product+${i}`,
-    });
-  }
-
-  // Transaction
-  await prisma.$transaction(
-    productsData.map((p) => prisma.product.create({ data: p })),
-  );
-
-  return { message: `Seeded ${count} products` };
 });
 
 const start = async () => {
