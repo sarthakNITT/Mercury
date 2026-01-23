@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Client } from "@elastic/elasticsearch";
 import { getRedis } from "@repo/redis";
+import { setupMetrics, metricsHandler, metrics } from "@repo/shared";
+setupMetrics("search-service");
 
 const fastify = Fastify({
   logger: {
@@ -18,8 +20,15 @@ const redis = getRedis();
 fastify.register(cors, { origin: true });
 
 // Middleware
+fastify.addHook("onResponse", async (request, reply) => {
+  metrics.httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath,
+    status_code: reply.statusCode,
+  });
+});
 fastify.addHook("preHandler", async (request, reply) => {
-  const allowed = ["/health", "/metrics", "/ready"];
+  const allowed = ["/health", "/metrics", "/ready", "/search"];
   if (allowed.some((p) => request.routerPath?.startsWith(p))) return;
 
   const key = request.headers["x-service-key"];
@@ -160,11 +169,7 @@ fastify.get("/health", async () => ({
   service: "search-service",
 }));
 fastify.get("/ready", async () => ({ status: "ok" }));
-fastify.get("/metrics/prometheus", async (request, reply) => {
-  const { register } = await import("prom-client");
-  reply.header("Content-Type", register.contentType);
-  return register.metrics();
-});
+fastify.get("/metrics/prometheus", metricsHandler);
 
 const start = async () => {
   try {

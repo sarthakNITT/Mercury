@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import Stripe from "stripe";
 import { HttpClient } from "@repo/http";
+import { setupMetrics, metricsHandler, metrics } from "@repo/shared";
+setupMetrics("payments-service");
 
 const fastify = Fastify({
   logger: {
@@ -21,6 +23,11 @@ fastify.addHook("onRequest", async (request) => {
 });
 
 fastify.addHook("onResponse", async (request, reply) => {
+  metrics.httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath,
+    status_code: reply.statusCode,
+  });
   request.log.info(
     {
       traceId: request.id,
@@ -81,11 +88,7 @@ fastify.get("/metrics", async () => {
   };
 });
 
-fastify.get("/metrics/prometheus", async (request, reply) => {
-  const { register } = await import("prom-client");
-  reply.header("Content-Type", register.contentType);
-  return register.metrics();
-});
+fastify.get("/metrics/prometheus", metricsHandler);
 // Import centralized stripe instance
 import { stripe } from "./stripe";
 import { prisma } from "@repo/db";

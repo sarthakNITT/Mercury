@@ -138,4 +138,16 @@ process.on("SIGINT", async () => {
   process.exit(0);
 });
 
+import Fastify from "fastify";
+import { setupMetrics, metricsHandler } from "@repo/shared";
+
+// Metrics Server
+const fastify = Fastify({ logger: false });
+setupMetrics("worker-service");
+
+fastify.get("/metrics/prometheus", metricsHandler);
+fastify.get("/health", async () => ({ status: "ok" }));
+
+fastify.listen({ port: 4010, host: "0.0.0.0" }).catch(console.error);
+
 main().catch(console.error);

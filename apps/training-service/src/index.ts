@@ -6,6 +6,8 @@ import * as tf from "@tensorflow/tfjs-node";
 import path from "path";
 import fs from "fs";
 import axios from "axios";
+import { setupMetrics, metricsHandler, metrics } from "@repo/shared";
+setupMetrics("training-service");
 
 // Environment
 const PORT = parseInt(process.env.PORT || "4007");
@@ -25,9 +27,17 @@ const fastify = Fastify({
 
 fastify.register(cors, { origin: true });
 
+fastify.addHook("onResponse", async (request, reply) => {
+  metrics.httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath,
+    status_code: reply.statusCode,
+  });
+});
+
 // Auth Middleware
 fastify.addHook("preHandler", async (request, reply) => {
-  const allowedPaths = ["/health", "/ready", "/train/status"];
+  const allowedPaths = ["/health", "/ready", "/train/status", "/metrics"];
   if (allowedPaths.some((p) => request.routerPath?.startsWith(p))) return;
 
   const key = request.headers["x-service-key"];
@@ -48,6 +58,8 @@ fastify.get("/ready", async () => {
   } catch {}
   return { ok: db === "up", dependencies: { db } };
 });
+
+fastify.get("/metrics/prometheus", metricsHandler);
 
 // Training Status
 let lastTrainingStatus: any = { status: "idle" };

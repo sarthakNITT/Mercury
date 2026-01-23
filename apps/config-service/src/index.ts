@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { prisma } from "@repo/db";
 import { z } from "zod";
+import { setupMetrics, metricsHandler, metrics } from "@repo/shared";
+setupMetrics("config-service");
 
 const fastify = Fastify({
   logger: {
@@ -13,9 +15,17 @@ const PORT = parseInt(process.env.PORT || "4006");
 
 fastify.register(cors, { origin: true });
 
+fastify.addHook("onResponse", async (request, reply) => {
+  metrics.httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath,
+    status_code: reply.statusCode,
+  });
+});
+
 // Auth Middleware
 fastify.addHook("preHandler", async (request, reply) => {
-  const allowedPaths = ["/health", "/ready"];
+  const allowedPaths = ["/health", "/ready", "/metrics"];
   if (allowedPaths.some((p) => request.routerPath?.startsWith(p))) return;
 
   const key = request.headers["x-service-key"];
@@ -75,11 +85,7 @@ fastify.get("/risk-rules", async () => {
   return await prisma.riskRule.findMany({ where: { enabled: true } });
 });
 
-fastify.get("/metrics/prometheus", async (request, reply) => {
-  const { register } = await import("prom-client");
-  reply.header("Content-Type", register.contentType);
-  return register.metrics();
-});
+fastify.get("/metrics/prometheus", metricsHandler);
 
 fastify.post("/risk-rules", async (request, reply) => {
   const RiskRuleSchema = z.object({

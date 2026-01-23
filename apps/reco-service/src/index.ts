@@ -4,6 +4,8 @@ import { prisma } from "@repo/db";
 import { getRedis, isRedisAvailable } from "@repo/redis";
 import * as tf from "@tensorflow/tfjs-node";
 import { predictScore } from "./logic";
+import { setupMetrics, metricsHandler, metrics } from "@repo/shared";
+setupMetrics("reco-service");
 
 const fastify = Fastify({
   logger: {
@@ -23,6 +25,11 @@ fastify.addHook("onRequest", async (request) => {
 });
 
 fastify.addHook("onResponse", async (request, reply) => {
+  metrics.httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath,
+    status_code: reply.statusCode,
+  });
   request.log.info(
     {
       traceId: request.id,
@@ -105,11 +112,7 @@ fastify.get("/metrics", async () => {
   };
 });
 
-fastify.get("/metrics/prometheus", async (request, reply) => {
-  const { register } = await import("prom-client");
-  reply.header("Content-Type", register.contentType);
-  return register.metrics();
-});
+fastify.get("/metrics/prometheus", metricsHandler);
 
 // Config Fetching
 import { RecoWeights, DEFAULT_WEIGHTS } from "./config";

@@ -4,7 +4,7 @@ const API_GATEWAY = "http://localhost:4000";
 const WEB_URL = "http://localhost:3000";
 const ES_URL = "http://localhost:9200";
 const PROMETHEUS_URL = "http://localhost:9090";
-const GRAFANA_URL = "http://localhost:3001";
+const GRAFANA_URL = "http://localhost:3100";
 
 async function checkHealth(url: string, name: string) {
   try {

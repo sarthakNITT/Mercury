@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Mercury Market Force API",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev:disabled": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma:generate": "prisma generate",

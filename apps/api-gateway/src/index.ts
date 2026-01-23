@@ -120,6 +120,10 @@ fastify.get("/ready", async () => {
   };
 });
 
+// Metrics
+import { setupMetrics, metricsHandler } from "@repo/shared";
+setupMetrics("api-gateway");
+
 fastify.get("/metrics", async () => {
   return {
     service: "api-gateway",
@@ -128,11 +132,7 @@ fastify.get("/metrics", async () => {
   };
 });
 
-fastify.get("/metrics/prometheus", async (request, reply) => {
-  const { register } = await import("prom-client");
-  reply.header("Content-Type", register.contentType);
-  return register.metrics();
-});
+fastify.get("/metrics/prometheus", metricsHandler);
 
 // --- Validation Logic ---
 // We validate request bodies here before they are proxied.

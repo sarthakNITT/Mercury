@@ -76,4 +76,5 @@ export const UserCreateSchema = z.object({
 export type UserCreateInput = z.infer<typeof UserCreateSchema>;
 
 export const UserUpdateSchema = UserCreateSchema.partial();
-export type UserUpdateInput = z.infer<typeof UserUpdateSchema>;
+// Metrics
+export * from "./metrics";

@@ -2,7 +2,13 @@ import Fastify, { FastifyReply } from "fastify";
 import cors from "@fastify/cors";
 import { prisma } from "@repo/db";
 import { getRedis, isRedisAvailable } from "@repo/redis";
-import { EventBodySchema } from "@repo/shared";
+import {
+  EventBodySchema,
+  setupMetrics,
+  metricsHandler,
+  metrics,
+} from "@repo/shared";
+setupMetrics("events-service");
 
 const fastify = Fastify({
   logger: {
@@ -22,6 +28,11 @@ fastify.addHook("onRequest", async (request) => {
 });
 
 fastify.addHook("onResponse", async (request, reply) => {
+  metrics.httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath,
+    status_code: reply.statusCode,
+  });
   request.log.info(
     {
       traceId: request.id,
@@ -122,11 +133,7 @@ fastify.get("/metrics", async () => {
   };
 });
 
-fastify.get("/metrics/prometheus", async (request, reply) => {
-  const { register } = await import("prom-client");
-  reply.header("Content-Type", register.contentType);
-  return register.metrics();
-});
+fastify.get("/metrics/prometheus", metricsHandler);
 
 // SSE Stream
 fastify.get("/events/stream", (request, reply) => {

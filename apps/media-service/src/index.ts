@@ -2,6 +2,8 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { setupMetrics, metricsHandler, metrics } from "@repo/shared";
+setupMetrics("media-service");
 
 const fastify = Fastify({
   logger: {
@@ -12,6 +14,14 @@ const fastify = Fastify({
 const PORT = parseInt(process.env.PORT || "4008");
 
 fastify.register(cors, { origin: true });
+
+fastify.addHook("onResponse", async (request, reply) => {
+  metrics.httpRequestsTotal.inc({
+    method: request.method,
+    route: request.routerPath,
+    status_code: reply.statusCode,
+  });
+});
 
 // S3 / R2 Configuration
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -80,11 +90,7 @@ fastify.get("/health", async () => ({
 }));
 fastify.get("/ready", async () => ({ status: "ok" }));
 fastify.get("/metrics", async () => ({ status: "ok" }));
-fastify.get("/metrics/prometheus", async (request, reply) => {
-  const { register } = await import("prom-client");
-  reply.header("Content-Type", register.contentType);
-  return register.metrics();
-});
+fastify.get("/metrics/prometheus", metricsHandler);
 
 const start = async () => {
   try {
