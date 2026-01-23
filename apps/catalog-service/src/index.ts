@@ -83,6 +83,12 @@ fastify.get("/metrics", async () => {
   };
 });
 
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
+});
+
 // --- CATEGORIES ---
 
 // Get Categories
@@ -234,6 +240,22 @@ fastify.post("/products", async (request, reply) => {
       stock: result.data.stock || 0,
     },
   });
+
+  // Emit Redis Stream Event
+  try {
+    const redis = require("@repo/redis").getRedis();
+    await redis.xadd(
+      "mercury:catalog:stream",
+      "*",
+      "type",
+      "PRODUCT_CREATED",
+      "payload",
+      JSON.stringify(product),
+    );
+  } catch (e) {
+    console.error("Redis Stream Error", e);
+  }
+
   return product;
 });
 
@@ -266,6 +288,22 @@ fastify.patch("/products/:id", async (request, reply) => {
       where: { id },
       data: result.data,
     });
+
+    // Emit Redis Stream Event
+    try {
+      const redis = require("@repo/redis").getRedis();
+      await redis.xadd(
+        "mercury:catalog:stream",
+        "*",
+        "type",
+        "PRODUCT_UPDATED",
+        "payload",
+        JSON.stringify(product),
+      );
+    } catch (e) {
+      console.error("Redis Stream Error", e);
+    }
+
     return product;
   } catch (e) {
     return reply.code(404).send({ error: "Product not found" });
@@ -277,6 +315,22 @@ fastify.delete("/products/:id", async (request, reply) => {
   const { id } = request.params as { id: string };
   try {
     await prisma.product.delete({ where: { id } });
+
+    // Emit Redis Stream Event
+    try {
+      const redis = require("@repo/redis").getRedis();
+      await redis.xadd(
+        "mercury:catalog:stream",
+        "*",
+        "type",
+        "PRODUCT_DELETED",
+        "payload",
+        JSON.stringify({ id }),
+      );
+    } catch (e) {
+      console.error("Redis Stream Error", e);
+    }
+
     return { ok: true };
   } catch (e) {
     return reply.code(404).send({ error: "Product not found" });

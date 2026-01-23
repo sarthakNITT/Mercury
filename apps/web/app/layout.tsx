@@ -7,6 +7,7 @@ export const metadata: Metadata = {
 };
 
 import Navbar from "../components/Navbar";
+import { NextAuthProvider } from "../components/NextAuthProvider";
 
 export default function RootLayout({
   children,
@@ -16,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="container">
-          <Navbar />
-          <main>{children}</main>
-        </div>
+        <NextAuthProvider>
+          <div className="container">
+            <Navbar />
+            <main>{children}</main>
+          </div>
+        </NextAuthProvider>
       </body>
     </html>
   );

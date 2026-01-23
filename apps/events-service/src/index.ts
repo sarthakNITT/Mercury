@@ -122,6 +122,12 @@ fastify.get("/metrics", async () => {
   };
 });
 
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
+});
+
 // SSE Stream
 fastify.get("/events/stream", (request, reply) => {
   const raw = reply.raw;

@@ -99,6 +99,8 @@ const SERVICES = {
   reco: process.env.RECO_URL || "http://localhost:4003",
   risk: process.env.RISK_URL || "http://localhost:4004",
   payments: process.env.PAYMENTS_URL || "http://localhost:4005",
+  media: process.env.MEDIA_URL || "http://localhost:4008",
+  search: process.env.SEARCH_URL || "http://localhost:4009",
 };
 
 fastify.register(cors, { origin: true });
@@ -124,6 +126,12 @@ fastify.get("/metrics", async () => {
     uptimeSeconds: Math.floor((Date.now() - startTime) / 1000),
     requestsTotal: requestCount,
   };
+});
+
+fastify.get("/metrics/prometheus", async (request, reply) => {
+  const { register } = await import("prom-client");
+  reply.header("Content-Type", register.contentType);
+  return register.metrics();
 });
 
 // --- Validation Logic ---
@@ -327,6 +335,20 @@ registerProxy(fastify, {
   upstream: process.env.TRAINING_URL || "http://localhost:4007",
   prefix: "/train",
   rewritePrefix: "/train",
+});
+
+// 9. Media Service
+registerProxy(fastify, {
+  upstream: SERVICES.media,
+  prefix: "/uploads",
+  rewritePrefix: "/uploads",
+});
+
+// 10. Search Service
+registerProxy(fastify, {
+  upstream: SERVICES.search,
+  prefix: "/search",
+  rewritePrefix: "/search",
 });
 
 const start = async () => {

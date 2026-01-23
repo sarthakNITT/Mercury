@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "mercury-services"
+    static_configs:
+      - targets:
+        - "api-gateway:4000"
+        - "catalog-service:4001"
+        - "events-service:4002"
+        - "reco-service:4003"
+        - "risk-service:4004"
+        - "payments-service:4005"
+        - "config-service:4006"
+        - "training-service:4007"
+        - "media-service:4008"
+        - "search-service:4009"
+        - "worker-service:9091" # Worker usually doesn't have http server unless added? I will add Prom server to worker if needed, or assume it uses pushgateway? No, keeping it simple. Worker usually processes jobs. I'll add a tiny http server to worker-service for metrics if not present.

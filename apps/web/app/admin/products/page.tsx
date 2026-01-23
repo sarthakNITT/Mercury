@@ -32,6 +32,50 @@ export default function AdminProducts() {
   const [newDesc, setNewDesc] = useState("");
   const [newImage, setNewImage] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (!file) return;
+
+    setUploading(true);
+
+    try {
+      // 1. Get Presigned URL
+      const res = await fetch(`${API_URL}/uploads/presign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-service-key": "dev-service-key",
+        },
+        body: JSON.stringify({
+          filename: file.name,
+          contentType: file.type,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to get presigned URL");
+      const { uploadUrl, publicUrl } = await res.json();
+
+      // 2. Upload to R2
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) throw new Error("Upload failed");
+
+      setNewImage(publicUrl);
+    } catch (err) {
+      console.error(err);
+      alert("Image upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const fetchProducts = async (p = 1) => {
     setLoading(true);
@@ -183,15 +227,33 @@ export default function AdminProducts() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Image URL
-              </label>
+              <label className="block text-sm font-medium mb-1">Image</label>
+              <div className="flex gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleUpload}
+                  className="p-1 border rounded text-sm w-full"
+                  disabled={uploading}
+                />
+              </div>
+              {uploading && (
+                <div className="text-xs text-blue-600 mt-1">Uploading...</div>
+              )}
               <input
-                className="w-full p-2 border rounded"
+                className="w-full p-2 border rounded mt-2 text-sm text-gray-500"
                 value={newImage}
                 onChange={(e) => setNewImage(e.target.value)}
-                placeholder="https://..."
+                placeholder="Or paste URL..."
               />
+              {newImage && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={newImage}
+                  alt="Preview"
+                  className="mt-2 h-20 w-20 object-cover rounded border"
+                />
+              )}
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">
