@@ -7,8 +7,9 @@
   --color-background: hsl(0 0% 100%);
   --color-foreground: hsl(240 10% 3.9%);
 
-  --color-primary: hsl(262 83% 58%);
-  --color-primary-foreground: hsl(0 0% 98%);
+  /* Orange Primary (24.6 95% 53.1%) #F97316 */
+  --color-primary: hsl(24 95% 53%);
+  --color-primary-foreground: hsl(60 9.1% 97.8%);
 
   --color-secondary: hsl(240 4.8% 95.9%);
   --color-secondary-foreground: hsl(240 5.9% 10%);
@@ -86,7 +87,7 @@
     --color-popover: #0F172A;
     --color-popover-foreground: #E5E7EB;
 
-    --color-primary: #7C3AED;
+    --color-primary: #F97316;
     --color-primary-foreground: #ffffff;
 
     --color-secondary: #1F2937;
@@ -151,4 +152,22 @@
     height: 100%;
     -webkit-font-smoothing: antialiased;
   }
-}@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-100%); } } .animate-marquee { animation: marquee 25s linear infinite; } .mask-linear-fade { mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.mask-linear-fade {
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}

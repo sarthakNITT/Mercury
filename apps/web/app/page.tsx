@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, LayoutDashboard } from "lucide-react";
-import { api, Product } from "../lib/api";
+import { api, Product } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   ProductCard,
@@ -48,7 +48,7 @@ export default function Home() {
 
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-foreground">
             Next-gen commerce <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-300">
               intelligence stack
             </span>
           </h1>

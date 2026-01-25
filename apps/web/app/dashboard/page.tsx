@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, Metrics, Event, TrendingItem } from "../../lib/api";
+import { api, Metrics, Event, TrendingItem } from "@/lib/api";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { EventsTable } from "@/components/dashboard/events-table";
 import { FraudTable } from "@/components/dashboard/fraud-table";
