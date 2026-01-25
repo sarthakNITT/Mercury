@@ -96,8 +96,8 @@ export default function Home() {
       <TechMarquee />
 
       {/* TEXT REVEAL SECTION */}
-      <section className="min-h-screen bg-background relative z-10">
-        <TextReveal text="Mercury connects to apps, tools, and databases, syncs their data in real time, and exposes it through a unified search interface. This enables AI systems to reliably retrieve grounded, up-to-date information from real data sources on demand via an LLM-friendly interface." />
+      <section className="min-h-[60vh] bg-background relative z-10">
+        <TextReveal text="Mercury connects to apps, tools, and databases, syncs their data in real time, and exposes it through a unified search interface. This enables AI systems to reliably retrieve grounded, up-to-date information from real data sources on demand via an LLM-friendly interface. It's the missing bridge between your data silo and your intelligence layer." />
       </section>
 
       {/* FEATURE CARDS */}
