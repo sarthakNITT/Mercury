@@ -55,7 +55,8 @@ export interface TrendingItem {
 export const api = {
   getProducts: async (): Promise<Product[]> => {
     const res = await fetch(`${API_URL}/products`);
-    return res.json();
+    const json = await res.json();
+    return json.data || [];
   },
 
   getProduct: async (id: string): Promise<Product> => {
