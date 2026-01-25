@@ -154,6 +154,16 @@ export const api = {
     });
     return res.json();
   },
+
+  getPaymentStatus: async (): Promise<{ enabled: boolean }> => {
+    try {
+      const res = await fetch(`${API_URL}/checkout/status`);
+      if (!res.ok) return { enabled: false };
+      return res.json();
+    } catch {
+      return { enabled: false };
+    }
+  },
 };
 
 export interface CheckoutResponse {

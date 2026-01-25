@@ -94,11 +94,37 @@ import { stripe } from "./stripe";
 import { prisma } from "@repo/db";
 
 // ... constants ...
+// ... constants ...
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+const PAYMENTS_MODE =
+  process.env.PAYMENTS_MODE ||
+  (process.env.NODE_ENV === "production"
+    ? "disabled"
+    : process.env.STRIPE_SECRET_KEY
+      ? "enabled"
+      : "disabled");
 
 const riskClient = new HttpClient("http://localhost:4004"); // Risk Service
 
+fastify.get("/payments/status", async () => {
+  return { enabled: PAYMENTS_MODE === "enabled" };
+});
+
+// Gateway proxies /checkout -> /checkout, so we need this route for external access
+fastify.get("/checkout/status", async () => {
+  return { enabled: PAYMENTS_MODE === "enabled" };
+});
+
 fastify.post("/checkout/create-session", async (request, reply) => {
+  if (PAYMENTS_MODE === "disabled") {
+    reply.code(503);
+    return {
+      ok: false,
+      error: "PAYMENTS_DISABLED",
+      message: "Payments are disabled in this production demo.",
+    };
+  }
+
   const { items, userId } = request.body as { items: any[]; userId: string };
 
   // 1. Calculate Total & Validate
@@ -180,7 +206,8 @@ fastify.post("/checkout/create-session", async (request, reply) => {
 });
 
 // 5. Payment Status Endpoint
-fastify.get("/payments/status", async (request, reply) => {
+fastify.get("/payments/status-check", async (request, reply) => {
+  // Renamed slightly to check transaction status vs service status
   const { sessionId } = request.query as { sessionId: string };
 
   if (!sessionId) {
@@ -215,6 +242,10 @@ fastify.get("/payments/status", async (request, reply) => {
 });
 
 fastify.post("/webhooks/stripe", async (request, reply) => {
+  if (PAYMENTS_MODE === "disabled") {
+    return { ok: true, disabled: true };
+  }
+
   const sig = request.headers["stripe-signature"] as string;
   const rawBody = (request.raw as any).body; // Need raw body for verification.
   // Fastify consumes body by default. We need 'fastify-raw-body' or similar to get raw buffer?
@@ -301,7 +332,9 @@ fastify.post("/webhooks/stripe", async (request, reply) => {
 const start = async () => {
   try {
     await fastify.listen({ port: PORT, host: "0.0.0.0" });
-    console.log(`Payments Service running on port ${PORT}`);
+    console.log(
+      `Payments Service running on port ${PORT} (Mode: ${PAYMENTS_MODE})`,
+    );
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

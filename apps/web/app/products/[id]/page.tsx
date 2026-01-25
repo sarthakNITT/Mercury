@@ -62,6 +62,12 @@ export default function ProductPage({
       .finally(() => setLoading(false));
   }, [id]);
 
+  const [paymentEnabled, setPaymentEnabled] = useState(true);
+
+  useEffect(() => {
+    api.getPaymentStatus().then((s) => setPaymentEnabled(s.enabled));
+  }, []);
+
   const handleAction = async (type: string) => {
     if (!product) return;
     const userId = getUserId();
@@ -72,6 +78,10 @@ export default function ProductPage({
     }
 
     if (type === "PURCHASE") {
+      if (!paymentEnabled) {
+        alert("Payments are disabled in this production demo.");
+        return;
+      }
       try {
         setLoading(true);
         const checkout = await api.createCheckoutSession(userId, [
@@ -86,6 +96,11 @@ export default function ProductPage({
         setLoading(false);
 
         if (checkout.error) {
+          if (checkout.error === "PAYMENTS_DISABLED") {
+            setPaymentEnabled(false);
+            alert("Payments are disabled in this production demo.");
+            return;
+          }
           alert(
             `Transaction Failed: ${checkout.error}\n\n${checkout.reasons ? checkout.reasons.join(", ") : ""}`,
           );
@@ -136,6 +151,23 @@ export default function ProductPage({
       >
         &larr; Back
       </button>
+
+      {!paymentEnabled && (
+        <div
+          style={{
+            background: "#fff3cd",
+            color: "#856404",
+            padding: "1rem",
+            marginBottom: "1rem",
+            borderRadius: "4px",
+            border: "1px solid #ffeeba",
+            fontWeight: "bold",
+            textAlign: "center",
+          }}
+        >
+          Payments are disabled in this production demo.
+        </div>
+      )}
 
       <div className="card" style={{ padding: "2rem" }}>
         <div style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
@@ -203,8 +235,18 @@ export default function ProductPage({
               <button
                 onClick={() => handleAction("PURCHASE")}
                 className="btn btn-success"
+                disabled={!paymentEnabled}
+                style={
+                  !paymentEnabled
+                    ? {
+                        opacity: 0.5,
+                        cursor: "not-allowed",
+                        background: "#aaa",
+                      }
+                    : {}
+                }
               >
-                Buy Now (Demo)
+                {paymentEnabled ? "Buy Now (Demo)" : "Sales Disabled"}
               </button>
             </div>
           </div>
