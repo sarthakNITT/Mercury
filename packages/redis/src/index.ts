@@ -55,6 +55,21 @@ export async function cacheGetJson<T>(key: string): Promise<T | null> {
   }
 }
 
+// Standardized Cache Key Generator
+// Format: mercury:cache:<service>:<resource>:<scope>:<hash>
+export function generateCacheKey(
+  service: string,
+  resource: string,
+  scope: string,
+  identifier: string | object,
+): string {
+  const hash =
+    typeof identifier === "string"
+      ? identifier
+      : JSON.stringify(identifier).replace(/[\"\:]/g, ""); // Simple hash for demo
+  return `mercury:cache:${service}:${resource}:${scope}:${hash}`;
+}
+
 export async function cacheSetJson(
   key: string,
   value: any,

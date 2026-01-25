@@ -6,11 +6,20 @@ interface ProxyOptions {
   prefix: string;
   rewritePrefix: string;
   isSSE?: boolean;
+  timeout?: number;
+  proxyOptions?: any;
 }
 
 export async function registerProxy(
   fastify: FastifyInstance,
-  { upstream, prefix, rewritePrefix, isSSE = false }: ProxyOptions,
+  {
+    upstream,
+    prefix,
+    rewritePrefix,
+    isSSE = false,
+    timeout,
+    proxyOptions = {},
+  }: ProxyOptions,
 ) {
   fastify.register(proxy, {
     upstream,
@@ -19,6 +28,8 @@ export async function registerProxy(
     http2: false,
     // proxyPayloads: true, // This is default true usually.
     // retryCount: 1, // Retry once
+    ...(timeout ? { http: { requestOptions: { timeout } } } : {}),
+    ...proxyOptions,
     replyOptions: {
       rewriteRequestHeaders: (request, headers) => {
         return {

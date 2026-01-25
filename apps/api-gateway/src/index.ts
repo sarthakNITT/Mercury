@@ -248,24 +248,28 @@ registerProxy(fastify, {
   upstream: SERVICES.catalog,
   prefix: "/products",
   rewritePrefix: "/products",
+  timeout: 3000,
 });
 
 registerProxy(fastify, {
   upstream: SERVICES.catalog,
   prefix: "/seed",
   rewritePrefix: "/seed",
+  timeout: 10000,
 });
 
 registerProxy(fastify, {
   upstream: SERVICES.catalog,
   prefix: "/categories",
   rewritePrefix: "/categories",
+  timeout: 3000,
 });
 
 registerProxy(fastify, {
   upstream: SERVICES.events, // Users are in events-service
   prefix: "/users",
   rewritePrefix: "/users",
+  timeout: 3000,
 });
 
 // 2. Events Service (SSE)
@@ -274,6 +278,7 @@ registerProxy(fastify, {
   prefix: "/events",
   rewritePrefix: "/events",
   isSSE: true, // Handles /events/stream
+  // No timeout for SSE
 });
 
 // 3. Reco Service
@@ -281,6 +286,7 @@ registerProxy(fastify, {
   upstream: SERVICES.reco,
   prefix: "/recommendations",
   rewritePrefix: "/recommendations",
+  timeout: 3000,
 });
 
 // 4. Risk Service
@@ -288,6 +294,7 @@ registerProxy(fastify, {
   upstream: SERVICES.risk,
   prefix: "/risk",
   rewritePrefix: "/risk",
+  timeout: 3000,
 });
 
 // 5. Payments Service
@@ -295,12 +302,22 @@ registerProxy(fastify, {
   upstream: SERVICES.payments,
   prefix: "/checkout",
   rewritePrefix: "/checkout",
+  timeout: 10000,
 });
 
 registerProxy(fastify, {
   upstream: SERVICES.payments,
   prefix: "/webhooks",
   rewritePrefix: "/webhooks",
+  timeout: 10000,
+  proxyOptions: {
+    upstream: "", // Not used by fastify-http-proxy but needed for types if strict
+    replyOptions: {
+      rewriteRequestHeaders: (originalReq: any, headers: any) => {
+        return headers;
+      },
+    },
+  },
 });
 
 // 6. Metrics & Trending (Events Service)
@@ -309,24 +326,28 @@ registerProxy(fastify, {
   upstream: SERVICES.events,
   prefix: "/metrics/overview",
   rewritePrefix: "/metrics/overview",
+  timeout: 3000,
 });
 
 registerProxy(fastify, {
   upstream: SERVICES.events,
   prefix: "/metrics/perf",
   rewritePrefix: "/metrics/perf",
+  timeout: 3000,
 });
 
 registerProxy(fastify, {
   upstream: SERVICES.events,
   prefix: "/trending",
   rewritePrefix: "/trending",
+  timeout: 3000,
 });
 
 registerProxy(fastify, {
   upstream: SERVICES.events,
   prefix: "/demo",
   rewritePrefix: "/demo",
+  timeout: 5000,
 });
 
 // 7. Config Service
@@ -334,18 +355,21 @@ registerProxy(fastify, {
   upstream: process.env.CONFIG_URL || "http://localhost:4006",
   prefix: "/configs",
   rewritePrefix: "/configs",
+  timeout: 3000,
 });
 
 registerProxy(fastify, {
   upstream: process.env.CONFIG_URL || "http://localhost:4006",
   prefix: "/risk-rules",
   rewritePrefix: "/risk-rules",
+  timeout: 3000,
 });
 
 registerProxy(fastify, {
   upstream: process.env.CONFIG_URL || "http://localhost:4006",
   prefix: "/model-registry",
   rewritePrefix: "/model-registry",
+  timeout: 3000,
 });
 
 // 8. Training Service
@@ -353,6 +377,7 @@ registerProxy(fastify, {
   upstream: process.env.TRAINING_URL || "http://localhost:4007",
   prefix: "/train",
   rewritePrefix: "/train",
+  timeout: 10000,
 });
 
 // 9. Media Service
@@ -360,6 +385,7 @@ registerProxy(fastify, {
   upstream: SERVICES.media,
   prefix: "/uploads",
   rewritePrefix: "/uploads",
+  timeout: 10000,
 });
 
 // 10. Search Service
@@ -367,6 +393,7 @@ registerProxy(fastify, {
   upstream: SERVICES.search,
   prefix: "/search",
   rewritePrefix: "/search",
+  timeout: 3000,
 });
 
 const start = async () => {
