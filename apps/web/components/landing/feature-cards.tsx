@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -10,6 +9,7 @@ interface Feature {
   id: string;
   name: string;
   description: string;
+  details: string;
   highlight?: boolean;
   points: string[];
 }
@@ -19,6 +19,8 @@ const features: Feature[] = [
     id: "realtime",
     name: "Real-time",
     description: "Instant event processing",
+    details:
+      "Built on a high-concurrency event loop that processes millions of signals per second. Mercury ensures that every interaction—from a click to a transaction—is captured and acted upon in sub-milliseconds, enabling true real-time experiences for your users.",
     points: [
       "Sub-millisecond latency",
       "Live socket updates",
@@ -31,6 +33,8 @@ const features: Feature[] = [
     name: "Risk Engine",
     description: "Advanced fraud detection",
     highlight: true,
+    details:
+      "Our proprietary Risk Engine analyzes over 50 behavioral data points in real-time. By leveraging machine learning models trained on global fraud patterns, we block malicious actors instantly without adding friction for legitimate users. Customize rules to fit your business logic.",
     points: [
       "Behavioral analysis",
       "Velocity checks",
@@ -44,6 +48,8 @@ const features: Feature[] = [
     id: "intelligence",
     name: "Intelligence",
     description: "Smart recommendations",
+    details:
+      "Drive engagement with a recommendation system that learns from every interaction. Whether it's collaborative filtering for products or content-based matching for personalized feeds, Mercury's Intelligence layer boosts conversion rates by serving the right content at the right time.",
     points: [
       "Collaborative filtering",
       "User history tracking",
@@ -55,6 +61,8 @@ const features: Feature[] = [
     id: "analytics",
     name: "Analytics",
     description: "Deep observability",
+    details:
+      "Gain complete visibility into your marketplace's health. Track conversion funnels live, replay user sessions to understand drop-offs, and generate custom revenue reports. Mercury gives you the data you need to make informed decisions without the lag of traditional analytics.",
     points: [
       "Live conversion funnels",
       "User session playback",
@@ -65,7 +73,11 @@ const features: Feature[] = [
 ];
 
 export function FeatureCards() {
-  const [activeId, setActiveId] = useState<string | null>("risk");
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const handleToggle = (id: string) => {
+    setActiveId(activeId === id ? null : id);
+  };
 
   return (
     <section className="container mx-auto px-4 py-24">
@@ -79,22 +91,22 @@ export function FeatureCards() {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[500px]">
+      <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[600px] transition-all duration-500">
         {features.map((feature) => {
           const isActive = activeId === feature.id;
           return (
             <motion.div
               key={feature.id}
               layout
-              onClick={() => setActiveId(feature.id)}
+              onClick={() => handleToggle(feature.id)}
               className={cn(
-                "relative rounded-2xl p-8 flex flex-col border transition-colors duration-300 cursor-pointer overflow-hidden",
+                "relative rounded-2xl p-8 flex flex-col border transition-all duration-300 cursor-pointer overflow-hidden",
                 isActive
                   ? feature.highlight
-                    ? "bg-gradient-to-b from-orange-500/20 to-background border-orange-500/50 shadow-2xl shadow-orange-500/10"
+                    ? "bg-gradient-to-b from-orange-500/10 to-background border-orange-500/50 shadow-2xl shadow-orange-500/10"
                     : "bg-card border-primary/50 shadow-xl"
-                  : "bg-card/30 hover:bg-card/50 border-border/50",
-                isActive ? "lg:flex-[2]" : "lg:flex-[1]",
+                  : "bg-card/30 hover:bg-card/50 border-border/50 hover:border-border/80",
+                isActive ? "lg:flex-[3]" : "lg:flex-[1]",
               )}
             >
               {feature.highlight && (
@@ -103,7 +115,7 @@ export function FeatureCards() {
                 </div>
               )}
 
-              <div className="mb-6">
+              <div className="mb-2">
                 <motion.h3
                   layout="position"
                   className={cn(
@@ -115,7 +127,7 @@ export function FeatureCards() {
                 </motion.h3>
                 <motion.p
                   layout="position"
-                  className="text-sm text-muted-foreground mt-2"
+                  className="text-sm text-muted-foreground mt-2 font-medium"
                 >
                   {feature.description}
                 </motion.p>
@@ -124,59 +136,59 @@ export function FeatureCards() {
               {/* Collapsible Content */}
               <motion.div
                 initial={false}
-                animate={{ opacity: isActive ? 1 : 0.5 }}
-                className={cn("flex-1 overflow-hidden flex flex-col")}
+                animate={{ opacity: isActive ? 1 : 0 }}
+                className={cn(
+                  "flex-1 overflow-hidden flex flex-col space-y-6",
+                  isActive ? "block" : "hidden", // Force layout recalculation when hidden
+                )}
               >
-                <ul className="space-y-4 mb-8 flex-1">
-                  {feature.points.map((point) => (
-                    <li
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: isActive ? 1 : 0, y: isActive ? 0 : 10 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-muted-foreground leading-relaxed text-base pt-4"
+                >
+                  {feature.details}
+                </motion.p>
+
+                <ul className="space-y-3">
+                  {feature.points.map((point, idx) => (
+                    <motion.li
                       key={point}
-                      className="flex items-start gap-3 text-sm text-muted-foreground"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{
+                        opacity: isActive ? 1 : 0,
+                        x: isActive ? 0 : -10,
+                      }}
+                      transition={{ delay: 0.2 + idx * 0.05 }}
+                      className="flex items-center gap-3 text-sm text-muted-foreground"
                     >
                       <div
                         className={cn(
-                          "mt-1 p-0.5 rounded-full shrink-0",
+                          "p-1 rounded-full shrink-0",
                           feature.highlight
-                            ? "bg-orange-500/20 text-orange-500"
-                            : "bg-primary/10 text-primary",
+                            ? "text-orange-500 bg-orange-500/10"
+                            : "text-primary bg-primary/10",
                         )}
                       >
                         <Check className="h-3 w-3" />
                       </div>
-                      <span
-                        className={cn(
-                          isActive
-                            ? "block"
-                            : "hidden sm:block lg:hidden xl:block",
-                        )}
-                      >
-                        {point}
-                      </span>
-                    </li>
+                      <span>{point}</span>
+                    </motion.li>
                   ))}
                 </ul>
-
-                <Button
-                  variant={feature.highlight ? "default" : "outline"}
-                  className={cn(
-                    "w-full rounded-full transition-all",
-                    feature.highlight
-                      ? "bg-orange-500 hover:bg-orange-600 text-white"
-                      : "",
-                    isActive
-                      ? "opacity-100"
-                      : "opacity-0 pointer-events-none lg:opacity-100 lg:pointer-events-auto",
-                  )}
-                >
-                  {isActive ? "Explore Features" : "Learn more"}{" "}
-                  <ArrowRight
-                    className={cn(
-                      "ml-2 h-4 w-4",
-                      isActive ? "block" : "hidden",
-                    )}
-                  />
-                </Button>
               </motion.div>
+
+              {!isActive && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="mt-auto pt-8 flex items-center text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors"
+                >
+                  Learn more <ArrowRight className="ml-2 h-4 w-4" />
+                </motion.div>
+              )}
             </motion.div>
           );
         })}

@@ -14,7 +14,9 @@ export const TextReveal = ({ text, className }: TextRevealProps) => {
 
   const { scrollYProgress } = useScroll({
     target: targetRef,
-    offset: ["start 0.8", "start 0.2"],
+    // Start animation when top of section hits 60% of viewport
+    // End animation when bottom of section hits 80% of viewport (allows scrolling past to finish)
+    offset: ["start 0.6", "end 0.8"],
   });
 
   const words = text.split(" ");
@@ -26,7 +28,7 @@ export const TextReveal = ({ text, className }: TextRevealProps) => {
   return (
     <div
       ref={targetRef}
-      className={cn("relative z-0 min-h-[150vh]", className)}
+      className={cn("relative z-0 min-h-[200vh]", className)}
     >
       <div
         className={
@@ -91,18 +93,14 @@ interface CharProps {
 
 const Char = ({ char, range, progress }: CharProps) => {
   const opacity = useTransform(progress, range, [0.2, 1]);
+
+  // Ensure we hit the final color by clamping the range end slightly before 1.0 if needed,
+  // or just ensuring the input range is valid.
+  // We use [start, mid, end] -> [Dark, Orange, White]
+  const mid = range[0] + (range[1] - range[0]) / 2;
   const color = useTransform(
     progress,
-    // [start, middle, end]
-    // 0% -> 50% (Orange) -> 100% (White)
-    // Actually, simple range mapping:
-    // Before start: Dark
-    // At start: Dark
-    // At middle: Orange
-    // At end: White (and stays white)
-
-    // We need 3 points for color interpolation
-    [range[0], range[0] + (range[1] - range[0]) / 2, range[1]],
+    [range[0], mid, range[1]],
     ["#333333", "#F97316", "#FFFFFF"],
   );
 
