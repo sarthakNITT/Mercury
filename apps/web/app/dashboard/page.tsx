@@ -3,17 +3,11 @@
 import { useEffect, useState } from "react";
 import { api, Metrics, Event, TrendingItem } from "../../lib/api";
 import { MetricCard } from "@/components/dashboard/metric-card";
+import { EventsTable } from "@/components/dashboard/events-table";
+import { FraudTable } from "@/components/dashboard/fraud-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Activity,
   AlertTriangle,
@@ -24,7 +18,7 @@ import {
   Database,
   Flame,
 } from "lucide-react";
-import { Label } from "@/components/ui/label"; // Need Label
+import { Label } from "@/components/ui/label";
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -127,25 +121,33 @@ export default function Dashboard() {
   };
 
   if (loading && !metrics)
-    return <div className="container py-10">Loading dashboard...</div>;
+    return (
+      <div className="container py-20 text-center animate-pulse">
+        Loading dashboard environment...
+      </div>
+    );
 
   return (
-    <div className="container py-8 space-y-8">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in-50 duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-border/40 pb-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
             {judgesMode ? "Mercury Intelligence" : "Live Dashboard"}
           </h1>
           <Badge
             variant={liveConnected ? "default" : "destructive"}
-            className={liveConnected ? "bg-green-500 hover:bg-green-600" : ""}
+            className={
+              liveConnected
+                ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 shadow-sm border-emerald-500/20"
+                : ""
+            }
           >
             {liveConnected ? (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-2 px-1">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 LIVE
               </span>
@@ -155,16 +157,19 @@ export default function Dashboard() {
           </Badge>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4 flex-wrap">
-          <div className="flex items-center space-x-2 mr-2">
+        <div className="flex items-center gap-3 md:gap-4 flex-wrap justify-end">
+          <div className="flex items-center space-x-2 mr-2 bg-muted/30 px-3 py-1.5 rounded-full border border-border/50">
             <input
               type="checkbox"
               id="judges-mode"
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary"
               checked={judgesMode}
               onChange={(e) => setJudgesMode(e.target.checked)}
             />
-            <Label htmlFor="judges-mode" className="font-medium cursor-pointer">
+            <Label
+              htmlFor="judges-mode"
+              className="font-medium cursor-pointer text-sm"
+            >
               Judges Mode
             </Label>
           </div>
@@ -175,17 +180,18 @@ export default function Dashboard() {
               size="sm"
               onClick={handleSeed}
               disabled={generating}
+              className="h-9"
             >
-              <Database className="mr-2 h-4 w-4" /> Seed DB
+              <Database className="mr-2 h-3.5 w-3.5" /> Seed DB
             </Button>
           )}
 
           <Button
             onClick={handleDemoStory}
             disabled={generating}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground h-9 shadow-lg shadow-primary/20"
           >
-            <Play className="mr-2 h-4 w-4" />
+            <Play className="mr-2 h-3.5 w-3.5 fill-current" />
             {generating ? "Running..." : "Run Demo Story"}
           </Button>
 
@@ -195,8 +201,9 @@ export default function Dashboard() {
               size="sm"
               onClick={handleGenerateValues}
               disabled={generating}
+              className="h-9"
             >
-              <Zap className="mr-2 h-4 w-4" /> Gen 50 Events
+              <Zap className="mr-2 h-3.5 w-3.5" /> Gen 50 Events
             </Button>
           )}
         </div>
@@ -204,41 +211,43 @@ export default function Dashboard() {
 
       {/* Metrics Row */}
       {metrics && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             title="Total Events"
             value={metrics.totalEvents}
             icon={<Activity className="h-4 w-4" />}
-            className="border-l-4 border-l-blue-500"
+            className="border-t-4 border-t-blue-500 hover:shadow-lg transition-all"
           />
           <MetricCard
             title="Total Products"
             value={metrics.totalProducts}
             icon={<Package className="h-4 w-4" />}
-            className="border-l-4 border-l-green-500"
+            className="border-t-4 border-t-emerald-500 hover:shadow-lg transition-all"
           />
           <MetricCard
             title="Active Users"
             value={metrics.totalUsers}
             icon={<Users className="h-4 w-4" />}
-            className="border-l-4 border-l-amber-500"
+            className="border-t-4 border-t-amber-500 hover:shadow-lg transition-all"
           />
           {metrics.fraud && (
             <MetricCard
               title="Avg Risk Score"
               value={metrics.fraud.avgRiskScore.toFixed(1)}
               icon={<AlertTriangle className="h-4 w-4" />}
-              className="border-l-4 border-l-red-500"
+              className="border-t-4 border-t-red-500 hover:shadow-lg transition-all"
             />
           )}
         </div>
       )}
 
       {/* Fraud & Breakdown Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4 border-border/50 bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Global Activity Breakdown</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              Global Activity Breakdown
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {metrics && metrics.breakdown && (
@@ -247,9 +256,9 @@ export default function Dashboard() {
                   <Badge
                     key={type}
                     variant="secondary"
-                    className="text-sm px-3 py-1"
+                    className="text-sm px-3 py-1 bg-secondary/50 font-mono"
                   >
-                    {type}: {count}
+                    {type}: <span className="ml-1 font-bold">{count}</span>
                   </Badge>
                 ))}
               </div>
@@ -258,26 +267,26 @@ export default function Dashboard() {
         </Card>
 
         {metrics && metrics.fraud && (
-          <Card className="col-span-3 border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20">
+          <Card className="col-span-3 border-red-500/20 bg-red-500/5 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-red-600 dark:text-red-400">
+              <CardTitle className="text-red-600 dark:text-red-400 text-base font-semibold">
                 Risk Engine Stats
               </CardTitle>
             </CardHeader>
             <CardContent className="flex justify-around text-center">
-              <div>
+              <div className="bg-background/80 p-4 rounded-xl shadow-sm min-w-[100px]">
                 <div className="text-3xl font-bold text-red-600">
                   {metrics.fraud.blockedCount}
                 </div>
-                <div className="text-xs text-muted-foreground uppercase">
+                <div className="text-xs text-muted-foreground uppercase font-semibold mt-1">
                   Blocked
                 </div>
               </div>
-              <div>
+              <div className="bg-background/80 p-4 rounded-xl shadow-sm min-w-[100px]">
                 <div className="text-3xl font-bold text-amber-600">
                   {metrics.fraud.challengeCount}
                 </div>
-                <div className="text-xs text-muted-foreground uppercase">
+                <div className="text-xs text-muted-foreground uppercase font-semibold mt-1">
                   Challenged
                 </div>
               </div>
@@ -286,70 +295,15 @@ export default function Dashboard() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         {/* Recent Activity Table */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Recent Activity (Live)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[100px]">Time</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Product</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.slice(0, 10).map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {new Date(event.createdAt).toLocaleTimeString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          event.type === "PURCHASE"
-                            ? "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300"
-                            : event.type === "BLOCK"
-                              ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300"
-                              : ""
-                        }
-                      >
-                        {event.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {event.user?.name || "Unknown"}
-                    </TableCell>
-                    <TableCell className="text-sm truncate max-w-[150px]">
-                      {event.product?.name || "Unknown"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {events.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-muted-foreground h-24"
-                    >
-                      No recent events
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <EventsTable events={events} />
 
         {/* Trending Column */}
-        <Card className="col-span-3">
+        <Card className="col-span-3 border-amber-500/20 bg-amber-500/5 backdrop-blur-sm h-fit sticky top-24">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Flame className="h-5 w-5 text-amber-500" />
+            <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-base">
+              <Flame className="h-5 w-5 fill-current" />
               Trending Now (24h)
             </CardTitle>
           </CardHeader>
@@ -357,23 +311,25 @@ export default function Dashboard() {
             {trending.map((item, index) => (
               <div
                 key={item.product.id}
-                className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+                className="flex items-center justify-between border-b border-amber-500/10 pb-3 last:border-0 last:pb-0"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary font-bold text-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background font-bold text-sm shadow-sm text-amber-600 ring-1 ring-amber-500/20">
                     #{index + 1}
                   </div>
                   <div>
-                    <div className="font-medium text-sm line-clamp-1">
+                    <div className="font-semibold text-sm line-clamp-1">
                       {item.product.name}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground font-mono">
                       {(item.product.price / 100).toFixed(2)}{" "}
                       {item.product.currency}
                     </div>
                   </div>
                 </div>
-                <Badge className="bg-amber-500">{item.score.toFixed(0)}</Badge>
+                <Badge className="bg-amber-500 hover:bg-amber-600 border-none">
+                  {item.score.toFixed(0)}
+                </Badge>
               </div>
             ))}
           </CardContent>
@@ -381,63 +337,7 @@ export default function Dashboard() {
       </div>
 
       {/* Fraud Feed */}
-      <Card className="border-red-200 dark:border-red-900">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-            <AlertTriangle className="h-5 w-5" />
-            Fraud Feed (High Risk)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Risk Score</TableHead>
-                <TableHead>Decision</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {fraudEvents.map((event: any) => (
-                <TableRow key={event.id}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {new Date(event.createdAt).toLocaleTimeString()}
-                  </TableCell>
-                  <TableCell>{event.user?.name || "Unknown"}</TableCell>
-                  <TableCell>{event.product?.name || "Unknown"}</TableCell>
-                  <TableCell className="font-bold text-red-500">
-                    {event.meta?.riskScore}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        event.meta?.decision === "BLOCK"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                    >
-                      {event.meta?.decision}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {fraudEvents.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-muted-foreground h-24"
-                  >
-                    No suspicious activity detected
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <FraudTable events={fraudEvents} />
     </div>
   );
 }

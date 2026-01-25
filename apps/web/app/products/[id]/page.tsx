@@ -151,14 +151,18 @@ export default function ProductPage({
 
   if (loading) {
     return (
-      <div className="container py-10 space-y-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         <Skeleton className="h-10 w-32" />
-        <div className="grid md:grid-cols-2 gap-8">
-          <Skeleton className="h-[400px] w-full rounded-lg" />
-          <div className="space-y-4">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
+          <Skeleton className="h-[500px] w-full rounded-2xl" />
+          <div className="space-y-6 pt-4">
             <Skeleton className="h-12 w-3/4" />
             <Skeleton className="h-6 w-1/4" />
-            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <div className="flex gap-4">
+              <Skeleton className="h-14 w-full rounded-xl" />
+              <Skeleton className="h-14 w-full rounded-xl" />
+            </div>
           </div>
         </div>
       </div>
@@ -166,21 +170,24 @@ export default function ProductPage({
   }
 
   if (!product)
-    return <div className="container py-10">Product not found.</div>;
+    return (
+      <div className="container py-20 text-center">Product not found.</div>
+    );
 
   return (
-    <div className="container py-10">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 animate-in fade-in-50 duration-700">
       <Button
         variant="ghost"
         onClick={() => router.back()}
-        className="mb-8 pl-0 hover:bg-transparent hover:text-primary"
+        className="mb-8 pl-0 hover:bg-transparent hover:text-primary group"
       >
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Marketplace
+        <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />{" "}
+        Back to Marketplace
       </Button>
 
-      <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
-        {/* Left Column: Image */}
-        <div className="relative aspect-square overflow-hidden rounded-xl border bg-muted">
+      <div className="grid md:grid-cols-2 gap-12 lg:gap-20 items-start">
+        {/* Left Column: Image - Sticky */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border bg-muted/30 lg:sticky lg:top-24">
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -193,111 +200,160 @@ export default function ProductPage({
               No Image Available
             </div>
           )}
+
+          {trendingScore && (
+            <div className="absolute top-4 right-4">
+              <Badge className="bg-amber-500/90 hover:bg-amber-500 text-white border-none shadow-lg backdrop-blur-md px-3 py-1.5 flex gap-1.5 items-center">
+                <Flame className="h-3.5 w-3.5 fill-current" />
+                High Demand
+              </Badge>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Details */}
-        <div className="flex flex-col gap-6">
-          <div>
-            <Badge variant="outline" className="mb-2">
-              {product.category}
-            </Badge>
-            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
+        <div className="flex flex-col gap-8 pt-2">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Badge
+                variant="secondary"
+                className="px-3 py-1 text-sm font-medium"
+              >
+                {product.category}
+              </Badge>
+              {trendingScore && (
+                <span className="text-xs font-mono text-muted-foreground">
+                  Trend Score: {trendingScore}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl text-foreground">
               {product.name}
             </h1>
-          </div>
 
-          <div className="flex items-center gap-4">
             <div className="text-3xl font-bold text-primary">
               {product.currency} {(product.price / 100).toFixed(2)}
             </div>
-            {trendingScore && (
-              <Badge
-                variant="secondary"
-                className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-              >
-                <Flame className="h-3 w-3" />
-                Trending Score: {trendingScore}
-              </Badge>
-            )}
           </div>
 
+          <Separator className="bg-border/50" />
+
           {!paymentEnabled && (
-            <div className="rounded-md bg-yellow-500/15 p-3 text-sm font-medium text-yellow-600 dark:text-yellow-500 ring-1 ring-inset ring-yellow-500/20">
-              Payments are disabled in this production demo.
+            <div className="rounded-xl bg-orange-500/10 border border-orange-500/20 p-4 flex items-start gap-3">
+              <div className="mt-0.5 p-1 rounded-full bg-orange-500/20 text-orange-600 dark:text-orange-400">
+                <CreditCard className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+                  Payments Disabled
+                </h4>
+                <p className="text-xs text-orange-600/80 dark:text-orange-400/80 mt-0.5">
+                  Transactions are currently disabled in this demo environment.
+                </p>
+              </div>
             </div>
           )}
 
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            {product.description}
-          </p>
+          <div className="prose prose-neutral dark:prose-invert max-w-none">
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              {product.description}
+            </p>
+          </div>
 
-          <Separator />
-
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-4 pt-4">
             <Button
               size="lg"
-              className="flex-1 gap-2"
+              className="w-full h-14 text-base rounded-xl gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all font-semibold"
               onClick={() => handleAction("PURCHASE")}
               disabled={!paymentEnabled}
             >
-              <CreditCard className="h-4 w-4" />
+              <CreditCard className="h-5 w-5" />
               {paymentEnabled ? "Buy Now" : "Sales Disabled"}
             </Button>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="flex-1 gap-2"
-              onClick={() => handleAction("CART")}
-            >
-              <ShoppingCart className="h-4 w-4" />
-              Add to Cart
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="flex-1 gap-2"
-              onClick={() => handleAction("CLICK")}
-            >
-              <MousePointer2 className="h-4 w-4" />
-              Simulate Click
-            </Button>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                size="lg"
+                variant="secondary"
+                className="h-12 w-full rounded-xl gap-2"
+                onClick={() => handleAction("CART")}
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Add to Cart
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 w-full rounded-xl gap-2 hover:bg-secondary/50"
+                onClick={() => handleAction("CLICK")}
+              >
+                <MousePointer2 className="h-4 w-4" />
+                Simulate Click
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 pt-6 text-center text-xs text-muted-foreground">
+            <div className="flex flex-col gap-1 items-center justify-center p-3 rounded-lg bg-muted/30">
+              <span className="font-semibold text-foreground">
+                Fast Delivery
+              </span>
+              <span>2-3 Days</span>
+            </div>
+            <div className="flex flex-col gap-1 items-center justify-center p-3 rounded-lg bg-muted/30">
+              <span className="font-semibold text-foreground">Returns</span>
+              <span>30 Days</span>
+            </div>
+            <div className="flex flex-col gap-1 items-center justify-center p-3 rounded-lg bg-muted/30">
+              <span className="font-semibold text-foreground">Secure</span>
+              <span>Checkout</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Recommendations */}
       {recommendations.length > 0 && (
-        <div className="mt-20">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold tracking-tight">
-              Recommended for you
-            </h2>
+        <div className="mt-24 space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">
+                Recommended for you
+              </h2>
+              <p className="text-muted-foreground mt-2">
+                Personalized suggestions based on your history and similar
+                users.
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {recommendations.map((rec) => (
-              // Adapter only, since ProductCard expects Product.
-              // We'll trust the shape is close enough or map it.
-              // Recommendation actually matches mostly Product, except 'reason' and 'score'.
-              // We'll reconstruct a Product object.
-              <div key={rec.id} className="relative group">
-                <ProductCard
-                  product={{
-                    id: rec.id,
-                    name: rec.name,
-                    description: rec.reason, // Use reason as description for context
-                    price: rec.price,
-                    currency: rec.currency,
-                    category: rec.category,
-                    imageUrl: rec.imageUrl,
-                  }}
-                />
-                <div className="absolute top-2 left-2 z-10">
-                  <Badge className="bg-emerald-600 text-white shadow-sm">
-                    Match: {rec.score}%
-                  </Badge>
+
+          <div className="relative">
+            <div className="flex overflow-x-auto pb-8 -mx-4 px-4 snap-x sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-visible sm:pb-0 sm:px-0 gap-6 no-scrollbar">
+              {recommendations.map((rec) => (
+                <div
+                  key={rec.id}
+                  className="min-w-[280px] sm:min-w-0 snap-center relative group"
+                >
+                  <ProductCard
+                    product={{
+                      id: rec.id,
+                      name: rec.name,
+                      description: rec.reason,
+                      price: rec.price,
+                      currency: rec.currency,
+                      category: rec.category,
+                      imageUrl: rec.imageUrl,
+                    }}
+                  />
+                  <div className="absolute top-2 left-2 z-10">
+                    <Badge className="bg-emerald-600/90 text-white shadow-sm border-none backdrop-blur-sm">
+                      Match: {rec.score}%
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}

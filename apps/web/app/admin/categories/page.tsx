@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Search } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -86,17 +86,17 @@ export default function AdminCategories() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Manage product categories for the marketplace.
           </p>
         </div>
       </div>
 
-      <Card>
+      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Create Category</CardTitle>
         </CardHeader>
@@ -106,7 +106,7 @@ export default function AdminCategories() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="New Category Name"
-              className="max-w-md"
+              className="max-w-md bg-background/50"
             />
             <Button onClick={createCategory}>
               <Plus className="mr-2 h-4 w-4" />
@@ -114,15 +114,24 @@ export default function AdminCategories() {
             </Button>
           </div>
           {error && (
-            <div className="text-destructive mt-2 text-sm">{error}</div>
+            <div className="text-destructive mt-3 text-sm font-medium bg-destructive/10 p-2 rounded">
+              {error}
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="border rounded-md">
+      <Card className="border-border/50">
+        <div className="p-4 border-b flex items-center gap-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter categories..."
+            className="max-w-sm border-none shadow-none focus-visible:ring-0"
+          />
+        </div>
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead>Name</TableHead>
               <TableHead>ID</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -130,7 +139,7 @@ export default function AdminCategories() {
           </TableHeader>
           <TableBody>
             {categories.map((cat) => (
-              <TableRow key={cat.id}>
+              <TableRow key={cat.id} className="hover:bg-muted/30">
                 <TableCell className="font-medium">{cat.name}</TableCell>
                 <TableCell className="text-muted-foreground text-xs font-mono">
                   {cat.id}
@@ -140,7 +149,7 @@ export default function AdminCategories() {
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteCategory(cat.id)}
-                    className="text-destructive hover:bg-destructive/10"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -159,7 +168,7 @@ export default function AdminCategories() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -3,11 +3,11 @@
 @theme {
   --color-border: hsl(240 5.9% 90%);
   --color-input: hsl(240 5.9% 90%);
-  --color-ring: hsl(240 5.9% 10%);
+  --color-ring: hsl(262 83% 58%);
   --color-background: hsl(0 0% 100%);
   --color-foreground: hsl(240 10% 3.9%);
 
-  --color-primary: hsl(240 5.9% 10%);
+  --color-primary: hsl(262 83% 58%);
   --color-primary-foreground: hsl(0 0% 98%);
 
   --color-secondary: hsl(240 4.8% 95.9%);
@@ -29,6 +29,7 @@
   --color-card-foreground: hsl(240 10% 3.9%);
 
   --radius: 0.5rem;
+  --font-inter: var(--font-inter);
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -76,57 +77,78 @@
 /* Dark mode overrides */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-background: hsl(240 10% 3.9%);
-    --color-foreground: hsl(0 0% 98%);
-    --color-card: hsl(240 10% 3.9%);
-    --color-card-foreground: hsl(0 0% 98%);
-    --color-popover: hsl(240 10% 3.9%);
-    --color-popover-foreground: hsl(0 0% 98%);
-    --color-primary: hsl(0 0% 98%);
-    --color-primary-foreground: hsl(240 5.9% 10%);
-    --color-secondary: hsl(240 3.7% 15.9%);
-    --color-secondary-foreground: hsl(0 0% 98%);
-    --color-muted: hsl(240 3.7% 15.9%);
-    --color-muted-foreground: hsl(240 5% 64.9%);
-    --color-accent: hsl(240 3.7% 15.9%);
-    --color-accent-foreground: hsl(0 0% 98%);
+    --color-background: #0B0F17;
+    --color-foreground: #E5E7EB;
+
+    --color-card: #0F172A;
+    --color-card-foreground: #E5E7EB;
+
+    --color-popover: #0F172A;
+    --color-popover-foreground: #E5E7EB;
+
+    --color-primary: #7C3AED;
+    --color-primary-foreground: #ffffff;
+
+    --color-secondary: #1F2937;
+    --color-secondary-foreground: #E5E7EB;
+
+    --color-muted: #1F2937;
+    --color-muted-foreground: #9CA3AF;
+    /* Subtle text */
+
+    --color-accent: #1F2937;
+    --color-accent-foreground: #E5E7EB;
+
     --color-destructive: hsl(0 62.8% 30.6%);
     --color-destructive-foreground: hsl(0 0% 98%);
-    --color-border: hsl(240 3.7% 15.9%);
-    --color-input: hsl(240 3.7% 15.9%);
-    --color-ring: hsl(240 4.9% 83.9%);
+
+    --color-border: #1F2937;
+    --color-input: #1F2937;
+    --color-ring: #7C3AED;
   }
 }
 
 /* Manual class toggle support */
 .dark {
-  --color-background: hsl(240 10% 3.9%);
-  --color-foreground: hsl(0 0% 98%);
-  --color-card: hsl(240 10% 3.9%);
-  --color-card-foreground: hsl(0 0% 98%);
-  --color-popover: hsl(240 10% 3.9%);
-  --color-popover-foreground: hsl(0 0% 98%);
-  --color-primary: hsl(0 0% 98%);
-  --color-primary-foreground: hsl(240 5.9% 10%);
-  --color-secondary: hsl(240 3.7% 15.9%);
-  --color-secondary-foreground: hsl(0 0% 98%);
-  --color-muted: hsl(240 3.7% 15.9%);
-  --color-muted-foreground: hsl(240 5% 64.9%);
-  --color-accent: hsl(240 3.7% 15.9%);
-  --color-accent-foreground: hsl(0 0% 98%);
+  --color-background: #0B0F17;
+  --color-foreground: #E5E7EB;
+
+  --color-card: #0F172A;
+  --color-card-foreground: #E5E7EB;
+
+  --color-popover: #0F172A;
+  --color-popover-foreground: #E5E7EB;
+
+  --color-primary: #7C3AED;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #1F2937;
+  --color-secondary-foreground: #E5E7EB;
+
+  --color-muted: #1F2937;
+  --color-muted-foreground: #9CA3AF;
+
+  --color-accent: #1F2937;
+  --color-accent-foreground: #E5E7EB;
+
   --color-destructive: hsl(0 62.8% 30.6%);
   --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(240 3.7% 15.9%);
-  --color-input: hsl(240 3.7% 15.9%);
-  --color-ring: hsl(240 4.9% 83.9%);
+
+  --color-border: #1F2937;
+  --color-input: #1F2937;
+  --color-ring: #7C3AED;
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
   }
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
   }
-}
+}@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-100%); } } .animate-marquee { animation: marquee 25s linear infinite; } .mask-linear-fade { mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Trash2, Plus, X } from "lucide-react";
+import { Trash2, Plus, X, Search } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -22,7 +22,7 @@ interface Product {
   name: string;
   price: number;
   category: { id: string; name: string } | null;
-  stock: number;
+  // stock removed
 }
 
 interface Category {
@@ -155,7 +155,7 @@ export default function AdminProducts() {
           categoryId: newCatId,
           description: newDesc,
           imageUrl: newImage,
-          stock: 100,
+          // stock removed
         }),
       });
 
@@ -187,12 +187,12 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-          <p className="text-muted-foreground">
-            Manage your product inventory.
+          <p className="text-muted-foreground mt-1">
+            Manage your product inventory level.
           </p>
         </div>
         <Button onClick={() => setShowForm(!showForm)}>
@@ -212,7 +212,7 @@ export default function AdminProducts() {
       )}
 
       {showForm && (
-        <Card>
+        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
             <h3 className="text-lg font-semibold mb-4">New Product Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -222,6 +222,7 @@ export default function AdminProducts() {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Product Name"
+                  className="bg-background/50"
                 />
               </div>
               <div className="space-y-2">
@@ -230,12 +231,13 @@ export default function AdminProducts() {
                   type="number"
                   value={newPrice}
                   onChange={(e) => setNewPrice(Number(e.target.value))}
+                  className="bg-background/50"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Category</Label>
                 <select
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={newCatId}
                   onChange={(e) => setNewCatId(e.target.value)}
                 >
@@ -254,7 +256,7 @@ export default function AdminProducts() {
                     accept="image/*"
                     onChange={handleUpload}
                     disabled={uploading}
-                    className="file:text-primary"
+                    className="file:text-primary bg-background/50"
                   />
                 </div>
                 {uploading && (
@@ -263,7 +265,7 @@ export default function AdminProducts() {
                   </div>
                 )}
                 <Input
-                  className="mt-2"
+                  className="mt-2 bg-background/50"
                   value={newImage}
                   onChange={(e) => setNewImage(e.target.value)}
                   placeholder="Or paste URL..."
@@ -280,7 +282,7 @@ export default function AdminProducts() {
               <div className="md:col-span-2 space-y-2">
                 <Label>Description</Label>
                 <textarea
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="Product details..."
@@ -295,56 +297,69 @@ export default function AdminProducts() {
       )}
 
       {loading ? (
-        <div className="py-10 text-center text-muted-foreground">
+        <div className="py-20 text-center text-muted-foreground animate-pulse">
           Loading products...
         </div>
       ) : (
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {p.id}
-                    </div>
-                  </TableCell>
-                  <TableCell>{p.category?.name || "Uncategorized"}</TableCell>
-                  <TableCell>${(p.price / 100).toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteProduct(p.id)}
-                      className="text-destructive hover:bg-destructive/10"
+        <Card className="border-border/50">
+          <div className="p-4 border-b flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter products..."
+              className="max-w-sm border-none shadow-none focus-visible:ring-0"
+            />
+          </div>
+          <div className="rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>Product</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((p) => (
+                  <TableRow key={p.id} className="hover:bg-muted/30">
+                    <TableCell>
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {p.id}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-secondary text-secondary-foreground">
+                        {p.category?.name || "Uncategorized"}
+                      </span>
+                    </TableCell>
+                    <TableCell>${(p.price / 100).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteProduct(p.id)}
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {products.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center h-32 text-muted-foreground"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {products.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-center h-24 text-muted-foreground"
-                  >
-                    No products found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                      No products found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       )}
 
       <div className="flex items-center justify-end space-x-2">

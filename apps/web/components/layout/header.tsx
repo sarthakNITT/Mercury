@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User as UserIcon, Rocket, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -27,6 +29,16 @@ export function Header() {
   const [users, setUsers] = useState<User[]>([]);
   const [activeUserId, setActiveUserId] = useState<string>("");
   const [activeUserName, setActiveUserName] = useState<string>("Select User");
+  const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 8);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     // Load persistency
@@ -65,56 +77,78 @@ export function Header() {
     setActiveUserId(id);
     setActiveUserName(name);
     localStorage.setItem("mercury.activeUserId", id);
-    // Refresh page to apply context? No, just localStorage is fine as per old logic
-    // But old select did it, so we should be fine.
+    window.location.reload();
   };
 
+  const navLinks = [
+    { href: "/", label: "Home" },
+    ...(session ? [{ href: "/dashboard", label: "Dashboard" }] : []),
+    ...(session?.user.role === "ADMIN"
+      ? [{ href: "/admin", label: "Admin" }]
+      : []),
+  ];
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full transition-all duration-300",
+        scrolled
+          ? "bg-background/80 backdrop-blur-md shadow-sm border-b"
+          : "bg-background/0 backdrop-blur-sm border-b border-transparent",
+      )}
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center space-x-2">
-            <Rocket className="h-6 w-6 text-primary" />
+          <Link href="/" className="flex items-center space-x-2 group">
+            <div className="bg-primary/10 p-1.5 rounded-lg group-hover:bg-primary/20 transition-colors">
+              <Rocket className="h-5 w-5 text-primary" />
+            </div>
             <span className="font-bold text-xl tracking-tight hidden sm:inline-block">
               Mercury
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <Link
-              href="/"
-              className="transition-colors hover:text-foreground/80 text-foreground/60 hover:underline"
-            >
-              Marketplace
-            </Link>
-            <Link
-              href="/dashboard"
-              className="transition-colors hover:text-foreground/80 text-foreground/60 hover:underline"
-            >
-              Live Dashboard
-            </Link>
-            {session?.user.role === "ADMIN" && (
-              <Link
-                href="/admin"
-                className="transition-colors hover:text-foreground/80 text-foreground/60 hover:underline"
-              >
-                Admin
-              </Link>
-            )}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "px-4 py-2 text-sm font-medium transition-colors relative",
+                    isActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {link.label}
+                  {isActive && (
+                    <span className="absolute inset-x-0 -bottom-[10px] h-0.5 bg-primary animate-in fade-in zoom-in duration-300" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
         <div className="flex items-center gap-4">
+          <ThemeToggle />
+
+          <div className="h-6 w-px bg-border/50 hidden sm:block" />
+
           {/* User Selector or Auth */}
           {session ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-8 w-8 rounded-full"
+                  className="relative h-9 w-9 rounded-full ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <div className="flex items-center justify-center h-full w-full bg-primary/10 rounded-full">
-                    <UserIcon className="h-4 w-4" />
+                  <div className="flex items-center justify-center h-full w-full bg-primary/10 rounded-full text-primary font-medium">
+                    {session.user.name?.[0]?.toUpperCase() || (
+                      <UserIcon className="h-4 w-4" />
+                    )}
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -143,23 +177,26 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="h-9 gap-2 text-xs md:text-sm"
+                    className="h-9 gap-2 text-xs md:text-sm bg-background/50 backdrop-blur-sm"
                   >
-                    <UserIcon className="h-4 w-4" />
-                    {activeUserName}
+                    <UserIcon className="h-3.5 w-3.5 opacity-70" />
+                    <span className="max-w-[100px] truncate">
+                      {activeUserName}
+                    </span>
                     <ChevronDown className="h-3 w-3 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-[200px] h-[300px] overflow-y-auto"
+                  className="w-[220px] max-h-[300px] overflow-y-auto"
                 >
-                  <DropdownMenuLabel>Select Demo User</DropdownMenuLabel>
+                  <DropdownMenuLabel>Select Active User</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {users.map((u) => (
                     <DropdownMenuItem
                       key={u.id}
                       onClick={() => handleUserChange(u.id, u.name)}
+                      className="cursor-pointer"
                     >
                       {u.name}
                       {activeUserId === u.id && (
@@ -169,19 +206,19 @@ export function Header() {
                   ))}
                   {users.length === 0 && (
                     <div className="p-2 text-xs text-muted-foreground">
-                      No users found
+                      Loading users...
                     </div>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
 
               <Link href="/login">
-                <Button size="sm">Login</Button>
+                <Button size="sm" className="hidden sm:inline-flex">
+                  Login
+                </Button>
               </Link>
             </div>
           )}
-
-          <ThemeToggle />
         </div>
       </div>
     </header>
