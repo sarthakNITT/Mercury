@@ -158,7 +158,6 @@ fastify.addHook("preHandler", async (request, reply) => {
   const { url, method } = request;
 
   if (method === "POST" || method === "PATCH") {
-    return; // FIXED: Validation disabled because proxy bypasses body parsing. Rely on service validation.
     // Import Schemas dynamically to avoid load-time issues if shared isn't ready
     // @ts-ignore
     const {
