@@ -8,8 +8,8 @@
   --color-foreground: hsl(240 10% 3.9%);
 
   /* Orange Primary (24.6 95% 53.1%) #F97316 */
-  --color-primary: hsl(24 95% 53%);
-  --color-primary-foreground: hsl(60 9.1% 97.8%);
+  --color-primary: #F97316;
+  --color-primary-foreground: #ffffff;
 
   --color-secondary: hsl(240 4.8% 95.9%);
   --color-secondary-foreground: hsl(240 5.9% 10%);

@@ -91,7 +91,7 @@ export function FeatureCards() {
         </p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[600px] transition-all duration-500">
+      <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[500px] transition-all duration-500">
         {features.map((feature) => {
           const isActive = activeId === feature.id;
           return (
@@ -100,26 +100,27 @@ export function FeatureCards() {
               layout
               onClick={() => handleToggle(feature.id)}
               className={cn(
-                "relative rounded-2xl p-8 flex flex-col border transition-all duration-300 cursor-pointer overflow-hidden",
+                "relative rounded-2xl p-6 flex flex-col border transition-all duration-300 cursor-pointer overflow-hidden",
                 isActive
                   ? feature.highlight
                     ? "bg-gradient-to-b from-orange-500/10 to-background border-orange-500/50 shadow-2xl shadow-orange-500/10"
                     : "bg-card border-primary/50 shadow-xl"
                   : "bg-card/30 hover:bg-card/50 border-border/50 hover:border-border/80",
-                isActive ? "lg:flex-[3]" : "lg:flex-[1]",
+                isActive ? "lg:flex-[2]" : "lg:flex-[1]",
+                "min-h-[400px]",
               )}
             >
               {feature.highlight && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase shadow-lg z-10">
+                <div className="absolute top-4 right-4 bg-orange-500 text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase shadow-lg z-20">
                   Core Feature
                 </div>
               )}
 
-              <div className="mb-2">
+              <div className="mb-4 mt-2 pr-8">
                 <motion.h3
                   layout="position"
                   className={cn(
-                    "text-2xl font-bold whitespace-nowrap",
+                    "text-xl font-bold whitespace-nowrap",
                     feature.highlight ? "text-orange-500" : "text-foreground",
                   )}
                 >
@@ -127,66 +128,57 @@ export function FeatureCards() {
                 </motion.h3>
                 <motion.p
                   layout="position"
-                  className="text-sm text-muted-foreground mt-2 font-medium"
+                  className="text-sm text-muted-foreground mt-1 font-medium"
                 >
                   {feature.description}
                 </motion.p>
               </div>
 
-              {/* Collapsible Content */}
+              {/* Points always visible */}
+              <ul className="space-y-2 mb-4">
+                {feature.points.map((point) => (
+                  <li
+                    key={point}
+                    className="flex items-center gap-2 text-xs text-muted-foreground"
+                  >
+                    <div
+                      className={cn(
+                        "p-0.5 rounded-full shrink-0",
+                        feature.highlight
+                          ? "text-orange-500 bg-orange-500/10"
+                          : "text-primary bg-primary/10",
+                      )}
+                    >
+                      <Check className="h-3 w-3" />
+                    </div>
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Collapsible Details */}
               <motion.div
                 initial={false}
-                animate={{ opacity: isActive ? 1 : 0 }}
-                className={cn(
-                  "flex-1 overflow-hidden flex flex-col space-y-6",
-                  isActive ? "block" : "hidden", // Force layout recalculation when hidden
-                )}
+                animate={{
+                  opacity: isActive ? 1 : 0,
+                  height: isActive ? "auto" : 0,
+                }}
+                className={cn("overflow-hidden")}
               >
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: isActive ? 1 : 0, y: isActive ? 0 : 10 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-muted-foreground leading-relaxed text-base pt-4"
-                >
+                <p className="text-muted-foreground leading-relaxed text-sm pt-4 border-t border-border/50">
                   {feature.details}
-                </motion.p>
-
-                <ul className="space-y-3">
-                  {feature.points.map((point, idx) => (
-                    <motion.li
-                      key={point}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{
-                        opacity: isActive ? 1 : 0,
-                        x: isActive ? 0 : -10,
-                      }}
-                      transition={{ delay: 0.2 + idx * 0.05 }}
-                      className="flex items-center gap-3 text-sm text-muted-foreground"
-                    >
-                      <div
-                        className={cn(
-                          "p-1 rounded-full shrink-0",
-                          feature.highlight
-                            ? "text-orange-500 bg-orange-500/10"
-                            : "text-primary bg-primary/10",
-                        )}
-                      >
-                        <Check className="h-3 w-3" />
-                      </div>
-                      <span>{point}</span>
-                    </motion.li>
-                  ))}
-                </ul>
+                </p>
               </motion.div>
 
               {!isActive && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="mt-auto pt-8 flex items-center text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors"
+                  className="mt-auto pt-4"
                 >
-                  Learn more <ArrowRight className="ml-2 h-4 w-4" />
+                  <span className="inline-flex items-center text-xs font-semibold bg-orange-500 text-white px-4 py-2 rounded-full hover:bg-orange-600 transition-colors shadow-md hover:shadow-lg">
+                    Learn more <ArrowRight className="ml-2 h-3 w-3" />
+                  </span>
                 </motion.div>
               )}
             </motion.div>

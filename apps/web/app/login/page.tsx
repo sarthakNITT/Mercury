@@ -32,50 +32,70 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md bg-white p-8 rounded shadow">
-        <h1 className="text-2xl font-bold mb-6 text-center">
-          Login to Mercury
-        </h1>
+    <div className="flex min-h-screen items-center justify-center bg-background relative overflow-hidden">
+      {/* Background blobs for flair */}
+      <div className="absolute -top-[20%] -left-[10%] w-[600px] h-[600px] rounded-full bg-orange-500/10 blur-[100px] pointer-events-none" />
+      <div className="absolute top-[40%] -right-[10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[100px] pointer-events-none" />
+
+      <div className="w-full max-w-md bg-card/30 backdrop-blur-xl p-8 rounded-2xl border border-border/50 shadow-2xl relative z-10">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            Welcome Back
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Enter your credentials to access Mercury
+          </p>
+        </div>
+
         {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md mb-6 border border-destructive/20">
             {error}
           </div>
         )}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Email</label>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Email
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+              placeholder="name@example.com"
               required
             />
           </div>
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-1">Password</label>
+          <div className="space-y-2">
+            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Password
+            </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="flex h-10 w-full rounded-md border border-input bg-background/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            className="w-full bg-primary text-primary-foreground font-semibold py-2.5 rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 mt-2"
           >
             Sign In
           </button>
         </form>
-        <div className="mt-4 text-center">
+
+        <div className="mt-6 text-center text-sm">
+          <span className="text-muted-foreground">
+            Don&apos;t have an account?{" "}
+          </span>
           <Link
             href="/register"
-            className="text-sm text-blue-600 hover:underline"
+            className="text-primary hover:underline font-medium transition-colors"
           >
-            Don&apos;t have an account? Register
+            Register
           </Link>
         </div>
       </div>

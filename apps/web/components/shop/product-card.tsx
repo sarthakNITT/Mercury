@@ -26,12 +26,12 @@ export function ProductCard({ product }: ProductCardProps) {
       <Card
         className={cn(
           "h-full overflow-hidden transition-all duration-300",
-          "hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5",
-          "border-border/50 bg-card/50 backdrop-blur-sm",
-          "group-focus:ring-2 group-focus:ring-primary group-focus:ring-offset-2",
+          "hover:-translate-y-1 hover:shadow-2xl hover:shadow-orange-500/10",
+          "border-border/50 bg-black/40 backdrop-blur-xl",
+          "group-focus:ring-2 group-focus:ring-orange-500 group-focus:ring-offset-2",
         )}
       >
-        <div className="aspect-[4/3] relative overflow-hidden bg-muted/50">
+        <div className="aspect-[4/3] relative overflow-hidden bg-muted/20">
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -51,7 +51,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
           <div className="absolute top-3 left-3 flex gap-2">
             <Badge
-              className="shadow-sm backdrop-blur-md bg-background/80 hover:bg-background/90 text-foreground"
+              className="shadow-sm backdrop-blur-md bg-black/60 border-white/10 text-white"
               variant="outline"
             >
               {product.category}
@@ -59,7 +59,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {isOutOfStock && (
-            <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[1px]">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
               <Badge
                 variant="destructive"
                 className="px-3 py-1 text-sm shadow-lg"
@@ -72,12 +72,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
         <CardContent className="p-5">
           <div className="flex justify-between items-start gap-2 mb-2">
-            <h3 className="line-clamp-1 text-lg font-bold group-hover:text-primary transition-colors">
+            <h3 className="line-clamp-1 text-lg font-bold group-hover:text-orange-500 transition-colors">
               {product.name}
             </h3>
             <div
               className={cn(
-                "h-2 w-2 rounded-full mt-2 shrink-0",
+                "h-2 w-2 rounded-full mt-2 shrink-0 animate-pulse",
                 isOutOfStock
                   ? "bg-red-500"
                   : "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]",
@@ -91,13 +91,12 @@ export function ProductCard({ product }: ProductCardProps) {
         </CardContent>
 
         <CardFooter className="flex items-center justify-between p-5 pt-0">
-          <div className="text-xl font-bold tracking-tight">
+          <div className="text-xl font-bold tracking-tight text-white">
             {product.currency} {(product.price / 100).toFixed(2)}
           </div>
           <Button
             size="icon"
-            variant="secondary"
-            className="opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 disabled:opacity-50"
+            className="opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 disabled:opacity-50 bg-orange-500 hover:bg-orange-600 text-white"
             disabled={isOutOfStock}
           >
             <ShoppingCart className="h-4 w-4" />
