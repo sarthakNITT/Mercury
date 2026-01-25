@@ -32,13 +32,13 @@ export function HeroBackground() {
           ease: "easeInOut",
           delay: 2,
         }}
-        className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-blue-500/10 blur-[100px]"
+        className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-orange-500/10 blur-[100px]"
       />
 
       <motion.div
         animate={{
           scale: [1, 1.3, 1],
-          opacity: [0.2, 0.4, 0.2],
+          opacity: [0.1, 0.3, 0.1],
         }}
         transition={{
           duration: 12,
@@ -46,7 +46,7 @@ export function HeroBackground() {
           ease: "easeInOut",
           delay: 1,
         }}
-        className="absolute -bottom-[20%] left-[20%] w-[700px] h-[700px] rounded-full bg-cyan-500/10 blur-[100px]"
+        className="absolute -bottom-[20%] left-[20%] w-[700px] h-[700px] rounded-full bg-white/5 blur-[100px]"
       />
 
       {/* Grid Overlay */}

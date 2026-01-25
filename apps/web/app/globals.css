@@ -105,7 +105,7 @@
 
     --color-border: #1F2937;
     --color-input: #1F2937;
-    --color-ring: #7C3AED;
+    --color-ring: #F97316;
   }
 }
 
@@ -120,7 +120,7 @@
   --color-popover: #0F172A;
   --color-popover-foreground: #E5E7EB;
 
-  --color-primary: #7C3AED;
+  --color-primary: #F97316;
   --color-primary-foreground: #ffffff;
 
   --color-secondary: #1F2937;
@@ -137,7 +137,7 @@
 
   --color-border: #1F2937;
   --color-input: #1F2937;
-  --color-ring: #7C3AED;
+  --color-ring: #F97316;
 }
 
 @layer base {
