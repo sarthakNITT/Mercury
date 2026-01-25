@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -133,8 +132,6 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <ThemeToggle />
-
           <div className="h-6 w-px bg-border/50 hidden sm:block" />
 
           {/* User Selector or Auth */}

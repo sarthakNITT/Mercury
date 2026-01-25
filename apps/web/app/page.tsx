@@ -138,8 +138,13 @@ export default function Home() {
                 title="No products found"
                 description="The marketplace is currently empty. Add products via Admin."
               />
-              <Button asChild variant="outline">
-                <Link href="/admin/products">Go to Admin</Link>
+              <Button
+                asChild
+                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-full px-8 py-6 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:scale-105"
+              >
+                <Link href="/admin/products">
+                  Go to Admin <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             </div>
           )}
