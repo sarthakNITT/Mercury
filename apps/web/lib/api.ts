@@ -1,4 +1,13 @@
+import axios from "axios";
+
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+
+const client = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 export interface Product {
   id: string;
@@ -52,17 +61,24 @@ export interface TrendingItem {
   score: number;
 }
 
+export interface CheckoutResponse {
+  url?: string;
+  sessionId?: string;
+  riskScore?: number;
+  decision?: string;
+  error?: string;
+  reasons?: string[];
+}
+
 export const api = {
   getProducts: async (): Promise<Product[]> => {
-    const res = await fetch(`${API_URL}/products`);
-    const json = await res.json();
-    return json.data || [];
+    const { data } = await client.get("/products");
+    return data.data || [];
   },
 
   getProduct: async (id: string): Promise<Product> => {
-    const res = await fetch(`${API_URL}/products/${id}`);
-    if (!res.ok) throw new Error("Product not found");
-    return res.json();
+    const { data } = await client.get(`/products/${id}`);
+    return data;
   },
 
   trackEvent: async (
@@ -71,43 +87,37 @@ export const api = {
     productId: string,
     meta?: unknown,
   ) => {
-    await fetch(`${API_URL}/events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, type, productId, meta }),
-    });
+    await client.post("/events", { userId, type, productId, meta });
   },
 
   getMetrics: async (): Promise<Metrics> => {
-    const res = await fetch(`${API_URL}/metrics/overview`);
-    return res.json();
+    const { data } = await client.get("/metrics/overview");
+    return data;
   },
 
   getRecentEvents: async (): Promise<Event[]> => {
-    const res = await fetch(`${API_URL}/events/recent`);
-    return res.json();
+    const { data } = await client.get("/events/recent");
+    return data;
   },
 
   seed: async () => {
-    const res = await fetch(`${API_URL}/seed`, { method: "POST" });
-    return res.json();
+    const { data } = await client.post("/seed");
+    return data;
   },
 
   generateDemoEvents: async (count: number = 50) => {
-    const res = await fetch(`${API_URL}/events/generate?count=${count}`, {
-      method: "POST",
-    });
-    return res.json();
+    const { data } = await client.post(`/events/generate?count=${count}`);
+    return data;
   },
 
   getRecommendations: async (
     productId: string,
     userId?: string,
   ): Promise<{ productId: string; recommendations: Recommendation[] }> => {
-    const res = await fetch(
-      `${API_URL}/recommendations/${productId}?userId=${userId || ""}`,
+    const { data } = await client.get(
+      `/recommendations/${productId}?userId=${userId || ""}`,
     );
-    return res.json();
+    return data;
   },
 
   scoreRisk: async (
@@ -115,52 +125,48 @@ export const api = {
     productId: string,
     amount: number,
   ): Promise<RiskResult> => {
-    const res = await fetch(`${API_URL}/risk/score`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, productId, amount }),
+    const { data } = await client.post("/risk/score", {
+      userId,
+      productId,
+      amount,
     });
-    return res.json();
+    return data;
   },
 
   getTrending: async (
     limit: number = 10,
   ): Promise<{ limit: number; items: TrendingItem[]; source: string }> => {
-    const res = await fetch(`${API_URL}/trending?limit=${limit}`);
-    return res.json();
+    const { data } = await client.get(`/trending?limit=${limit}`);
+    return data;
   },
 
   getFraudEvents: async (): Promise<Event[]> => {
-    const res = await fetch(`${API_URL}/events/fraud`);
-    return res.json();
+    const { data } = await client.get("/events/fraud");
+    return data;
   },
 
   runDemoStory: async (mode: string = "normal"): Promise<unknown> => {
-    const res = await fetch(`${API_URL}/demo/story?mode=${mode}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ steps: 30 }),
+    const { data } = await client.post(`/demo/story?mode=${mode}`, {
+      steps: 30,
     });
-    return res.json();
+    return data;
   },
 
   createCheckoutSession: async (
     userId: string,
     items: { id: string; price: number; quantity: number; name?: string }[],
   ): Promise<CheckoutResponse> => {
-    const res = await fetch(`${API_URL}/checkout/create-session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, items }),
+    const { data } = await client.post("/checkout/create-session", {
+      userId,
+      items,
     });
-    return res.json();
+    return data;
   },
 
   getPaymentStatus: async (): Promise<{ enabled: boolean }> => {
     try {
-      const res = await fetch(`${API_URL}/checkout/status`);
-      if (!res.ok) return { enabled: false };
-      return res.json();
+      const { data } = await client.get("/checkout/status");
+      return data;
     } catch {
       return { enabled: false };
     }

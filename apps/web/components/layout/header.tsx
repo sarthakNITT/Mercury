@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -50,11 +51,12 @@ export function Header() {
       return;
     }
 
-    fetch(`${API_URL}/users`, {
-      headers: { "x-service-key": "dev-service-key" },
-    })
-      .then((res) => res.json())
-      .then((data) => {
+    axios
+      .get<{ id: string; name: string }[]>(`${API_URL}/users`, {
+        headers: { "x-service-key": "dev-service-key" },
+      })
+      .then((res) => {
+        const data = res.data;
         if (Array.isArray(data)) {
           setUsers(data);
           // If stored user matches one in list, find name
@@ -63,9 +65,12 @@ export function Header() {
             if (u) setActiveUserName(u.name);
           } else if (data.length > 0) {
             // Default to first
-            setActiveUserId(data[0].id);
-            setActiveUserName(data[0].name);
-            localStorage.setItem("mercury.activeUserId", data[0].id);
+            const firstUser = data[0];
+            if (firstUser) {
+              setActiveUserId(firstUser.id);
+              setActiveUserName(firstUser.name);
+              localStorage.setItem("mercury.activeUserId", firstUser.id);
+            }
           }
         }
       })
