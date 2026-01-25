@@ -249,6 +249,7 @@ registerProxy(fastify, {
   prefix: "/products",
   rewritePrefix: "/products",
   timeout: 3000,
+  proxyOptions: { proxyPayloads: false },
 });
 
 registerProxy(fastify, {
@@ -263,6 +264,7 @@ registerProxy(fastify, {
   prefix: "/categories",
   rewritePrefix: "/categories",
   timeout: 3000,
+  proxyOptions: { proxyPayloads: false },
 });
 
 registerProxy(fastify, {
@@ -270,6 +272,7 @@ registerProxy(fastify, {
   prefix: "/users",
   rewritePrefix: "/users",
   timeout: 3000,
+  proxyOptions: { proxyPayloads: false },
 });
 
 // 2. Events Service (SSE)
@@ -295,6 +298,7 @@ registerProxy(fastify, {
   prefix: "/risk",
   rewritePrefix: "/risk",
   timeout: 3000,
+  proxyOptions: { proxyPayloads: false },
 });
 
 // 5. Payments Service
@@ -303,6 +307,7 @@ registerProxy(fastify, {
   prefix: "/checkout",
   rewritePrefix: "/checkout",
   timeout: 10000,
+  proxyOptions: { proxyPayloads: false },
 });
 
 registerProxy(fastify, {

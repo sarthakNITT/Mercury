@@ -22,7 +22,6 @@ export async function registerProxy(
   }: ProxyOptions,
 ) {
   fastify.register(proxy, {
-    upstream,
     prefix,
     rewritePrefix,
     http2: false,
@@ -30,6 +29,7 @@ export async function registerProxy(
     // retryCount: 1, // Retry once
     ...(timeout ? { http: { requestOptions: { timeout } } } : {}),
     ...proxyOptions,
+    upstream, // Ensure upstream always wins
     replyOptions: {
       rewriteRequestHeaders: (request, headers) => {
         return {

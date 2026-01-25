@@ -1,4 +1,3 @@
-import { z } from "zod";
 import fetch from "node-fetch";
 
 const GATEWAY_URL = process.env.GATEWAY_URL || "http://localhost:4000";
@@ -10,7 +9,12 @@ const log = (msg: string, data?: any) => {
 
 async function request(method: string, path: string, body?: any) {
   const url = `${GATEWAY_URL}${path}`;
-  log(`${method} ${url}`);
+  if (body) {
+    log(`${method} ${url} with payload:`, body);
+  } else {
+    log(`${method} ${url}`);
+  }
+
   try {
     const res = await fetch(url, {
       method,
@@ -33,6 +37,30 @@ async function request(method: string, path: string, body?: any) {
 async function run() {
   log("Starting Validation Smoke Test...");
 
+  // 0. Create User
+  const userName = `SmokeUser_${Date.now()}`;
+  const userEmail = `test+${Date.now()}@example.com`;
+
+  const { status: userStatus, data: userData } = await request(
+    "POST",
+    "/users",
+    {
+      name: userName,
+      email: userEmail,
+    },
+  );
+
+  if (userStatus !== 200 && userStatus !== 201) {
+    console.error("Failed to create user", userStatus);
+    process.exit(1);
+  }
+  if (!userData || !userData.id) {
+    console.error("Failed to create user: Missing ID", userData);
+    process.exit(1);
+  }
+  const userId = userData.id;
+  log("User Created", { id: userId });
+
   // 1. Create Category
   const catName = `SmokeCat_${Date.now()}`;
   const { status: catStatus, data: catData } = await request(
@@ -44,8 +72,11 @@ async function run() {
   );
 
   if (catStatus !== 200 && catStatus !== 201) {
-    // Accept 200 or 201
-    console.error("Failed to create category");
+    console.error("Failed to create category", catStatus);
+    process.exit(1);
+  }
+  if (!catData || !catData.id) {
+    console.error("Failed to create category: Missing ID", catData);
     process.exit(1);
   }
   const catId = catData.id;
@@ -62,11 +93,16 @@ async function run() {
       categoryId: catId,
       description: "Smoke test product",
       stock: 10,
+      imageUrl: "http://example.com/image.png",
     },
   );
 
   if (prodStatus !== 200 && prodStatus !== 201) {
-    console.error("Failed to create product");
+    console.error("Failed to create product", prodStatus);
+    process.exit(1);
+  }
+  if (!prodData || !prodData.id) {
+    console.error("Failed to create product: Missing ID", prodData);
     process.exit(1);
   }
   const prodId = prodData.id;
@@ -82,13 +118,11 @@ async function run() {
     },
   );
 
-  if (invalidStatus === 400 && invalidData.error === "VALIDATION_ERROR") {
-    log("Validation Correctly Failed", invalidData);
-  } else if (
+  if (
     invalidStatus === 400 &&
-    invalidData.error === "Validation Failed"
+    (invalidData.error === "VALIDATION_ERROR" ||
+      invalidData.error === "Validation Failed")
   ) {
-    // index.ts msg
     log("Validation Correctly Failed", invalidData);
   } else {
     console.error("Validation SHOULD have failed but didn't", {
@@ -107,7 +141,7 @@ async function run() {
     },
   );
   if (updateStatus !== 200) {
-    console.error("Failed to update product");
+    console.error("Failed to update product", updateStatus);
     process.exit(1);
   }
   log("Product Updated");
@@ -118,9 +152,10 @@ async function run() {
     `/products/${prodId}`,
   );
   if (delProdStatus !== 200) {
-    console.error("Failed to delete product");
+    console.error("Failed to delete product", delProdStatus);
     process.exit(1);
   }
+  log("Product Deleted");
 
   // 6. Delete Category
   const { status: delCatStatus } = await request(
@@ -128,9 +163,10 @@ async function run() {
     `/categories/${catId}`,
   );
   if (delCatStatus !== 200) {
-    console.error("Failed to delete category");
+    console.error("Failed to delete category", delCatStatus);
     process.exit(1);
   }
+  log("Category Deleted");
 
   log("Smoke Test Passed!");
 }
