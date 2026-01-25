@@ -1,6 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Trash2, Plus } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -74,60 +86,79 @@ export default function AdminCategories() {
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">Manage Categories</h1>
-
-      <div className="mb-8 flex gap-4">
-        <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="New Category Name"
-          className="p-2 border rounded"
-        />
-        <button
-          onClick={createCategory}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
-        >
-          Create
-        </button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
+          <p className="text-muted-foreground">
+            Manage product categories for the marketplace.
+          </p>
+        </div>
       </div>
 
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <Card>
+        <CardHeader>
+          <CardTitle>Create Category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="New Category Name"
+              className="max-w-md"
+            />
+            <Button onClick={createCategory}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create
+            </Button>
+          </div>
+          {error && (
+            <div className="text-destructive mt-2 text-sm">{error}</div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                ID
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>ID</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {categories.map((cat) => (
-              <tr key={cat.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{cat.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <TableRow key={cat.id}>
+                <TableCell className="font-medium">{cat.name}</TableCell>
+                <TableCell className="text-muted-foreground text-xs font-mono">
                   {cat.id}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => deleteCategory(cat.id)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-destructive hover:bg-destructive/10"
                   >
-                    Delete
-                  </button>
-                </td>
-              </tr>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+            {categories.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={3}
+                  className="text-center h-24 text-muted-foreground"
+                >
+                  No categories found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

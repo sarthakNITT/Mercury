@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, Product } from "../lib/api";
-import Image from "next/image";
+import { HeroSection } from "@/components/home/hero-section";
+import {
+  ProductCard,
+  ProductCardSkeleton,
+} from "@/components/shop/product-card";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/common/empty-state";
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -17,90 +23,49 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading)
-    return (
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        Loading marketplace...
-      </div>
-    );
-
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <h1 className="title" style={{ fontSize: "2rem" }}>
-          Trending Products
-        </h1>
-        <div>{/* Optional filter/sort controls could go here */}</div>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      <HeroSection />
 
-      <div className="grid">
-        {products.length === 0 && !loading && (
-          <div className="col-span-full text-center py-10">
-            <p className="text-gray-500 mb-4">No products found.</p>
-            <Link
-              href="/admin/products"
-              className="text-blue-600 hover:underline"
-            >
-              Go to Admin to create products from scratch &rarr;
-            </Link>
-          </div>
-        )}
-        {products.map((product) => (
-          <Link
-            href={`/products/${product.id}`}
-            key={product.id}
-            className="card"
-          >
-            <div className="card-img">
-              {product.imageUrl ? (
-                <Image
-                  src={product.imageUrl}
-                  alt={product.name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                "No Image"
-              )}
-            </div>
-            <div className="card-body">
-              <h3 className="title">{product.name}</h3>
-              <p
-                style={{
-                  color: "#8b949e",
-                  fontSize: "0.9rem",
-                  marginBottom: "1rem",
-                }}
-              >
-                {product.category}
+      <section id="products" className="container py-12 md:py-16 lg:py-20">
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight">
+                Trending Products
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Explore our collection of real-time tracked items.
               </p>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span className="price">
-                  {(product.price / 100).toFixed(2)} {product.currency}
-                </span>
-                <span
-                  className="btn btn-outline"
-                  style={{ fontSize: "0.8rem" }}
-                >
-                  View Details
-                </span>
-              </div>
             </div>
-          </Link>
-        ))}
-      </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {loading &&
+              Array.from({ length: 8 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+
+            {!loading &&
+              products.length > 0 &&
+              products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+          </div>
+
+          {!loading && products.length === 0 && (
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <EmptyState
+                title="No products found"
+                description="The marketplace is currently empty. Add products via Admin."
+              />
+              <Button asChild variant="outline">
+                <Link href="/admin/products">Go to Admin</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

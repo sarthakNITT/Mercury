@@ -3,7 +3,19 @@
 import { useEffect, useState, use } from "react";
 import { api, Product, Recommendation } from "../../../lib/api";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ProductCard } from "@/components/shop/product-card";
+import {
+  ArrowLeft,
+  ShoppingCart,
+  MousePointer2,
+  CreditCard,
+  Flame,
+} from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 function getUserId() {
   if (typeof window === "undefined") return null;
@@ -57,7 +69,6 @@ export default function ProductPage({
       })
       .catch((err) => {
         console.error(err);
-        // router.push('/'); // optional: redirect if not found
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -115,7 +126,6 @@ export default function ProductPage({
         }
 
         if (checkout.url) {
-          // Redirect to Stripe
           window.location.href = checkout.url;
         } else {
           alert("Could not generate payment session.");
@@ -139,176 +149,152 @@ export default function ProductPage({
     if (type === "CART") alert("Added to cart!");
   };
 
-  if (loading) return <div className="container">Loading details...</div>;
-  if (!product) return <div className="container">Product not found.</div>;
+  if (loading) {
+    return (
+      <div className="container py-10 space-y-8">
+        <Skeleton className="h-10 w-32" />
+        <div className="grid md:grid-cols-2 gap-8">
+          <Skeleton className="h-[400px] w-full rounded-lg" />
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-3/4" />
+            <Skeleton className="h-6 w-1/4" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product)
+    return <div className="container py-10">Product not found.</div>;
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-      <button
+    <div className="container py-10">
+      <Button
+        variant="ghost"
         onClick={() => router.back()}
-        className="btn btn-outline"
-        style={{ marginBottom: "1rem" }}
+        className="mb-8 pl-0 hover:bg-transparent hover:text-primary"
       >
-        &larr; Back
-      </button>
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Marketplace
+      </Button>
 
-      {!paymentEnabled && (
-        <div
-          style={{
-            background: "#fff3cd",
-            color: "#856404",
-            padding: "1rem",
-            marginBottom: "1rem",
-            borderRadius: "4px",
-            border: "1px solid #ffeeba",
-            fontWeight: "bold",
-            textAlign: "center",
-          }}
-        >
-          Payments are disabled in this production demo.
+      <div className="grid md:grid-cols-2 gap-8 lg:gap-16">
+        {/* Left Column: Image */}
+        <div className="relative aspect-square overflow-hidden rounded-xl border bg-muted">
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+              No Image Available
+            </div>
+          )}
         </div>
-      )}
 
-      <div className="card" style={{ padding: "2rem" }}>
-        <div style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
-          <div className="card-img" style={{ height: "300px" }}>
-            {product.imageUrl ? (
-              <Image
-                src={product.imageUrl}
-                alt={product.name}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            ) : (
-              "No Image"
+        {/* Right Column: Details */}
+        <div className="flex flex-col gap-6">
+          <div>
+            <Badge variant="outline" className="mb-2">
+              {product.category}
+            </Badge>
+            <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
+              {product.name}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-3xl font-bold text-primary">
+              {product.currency} {(product.price / 100).toFixed(2)}
+            </div>
+            {trendingScore && (
+              <Badge
+                variant="secondary"
+                className="flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+              >
+                <Flame className="h-3 w-3" />
+                Trending Score: {trendingScore}
+              </Badge>
             )}
           </div>
 
-          <div>
-            <h1 className="title" style={{ fontSize: "2.5rem" }}>
-              {product.name}
-            </h1>
-            <p style={{ color: "#8b949e", fontSize: "1.2rem" }}>
-              {product.category}
-            </p>
-            {trendingScore && (
-              <div
-                className="tag"
-                style={{
-                  display: "inline-block",
-                  background: "linear-gradient(45deg, #f85149, #d29922)",
-                  color: "white",
-                  marginBottom: "0.5rem",
-                  fontWeight: "bold",
-                }}
-              >
-                🔥 Trending Score: {trendingScore}
-              </div>
-            )}
-            <p className="price" style={{ fontSize: "2rem", margin: "1rem 0" }}>
-              {(product.price / 100).toFixed(2)} {product.currency}
-            </p>
-            <p
-              style={{
-                lineHeight: "1.6",
-                fontSize: "1.1rem",
-                marginBottom: "2rem",
-              }}
-            >
-              {product.description}
-            </p>
-
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              <button
-                onClick={() => handleAction("CLICK")}
-                className="btn"
-                style={{ background: "#e3b341", color: "black" }}
-              >
-                Simulate Click
-              </button>
-              <button
-                onClick={() => handleAction("CART")}
-                className="btn"
-                style={{ background: "#d29922" }}
-              >
-                Add to Cart
-              </button>
-              <button
-                onClick={() => handleAction("PURCHASE")}
-                className="btn btn-success"
-                disabled={!paymentEnabled}
-                style={
-                  !paymentEnabled
-                    ? {
-                        opacity: 0.5,
-                        cursor: "not-allowed",
-                        background: "#aaa",
-                      }
-                    : {}
-                }
-              >
-                {paymentEnabled ? "Buy Now (Demo)" : "Sales Disabled"}
-              </button>
+          {!paymentEnabled && (
+            <div className="rounded-md bg-yellow-500/15 p-3 text-sm font-medium text-yellow-600 dark:text-yellow-500 ring-1 ring-inset ring-yellow-500/20">
+              Payments are disabled in this production demo.
             </div>
+          )}
+
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            {product.description}
+          </p>
+
+          <Separator />
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              size="lg"
+              className="flex-1 gap-2"
+              onClick={() => handleAction("PURCHASE")}
+              disabled={!paymentEnabled}
+            >
+              <CreditCard className="h-4 w-4" />
+              {paymentEnabled ? "Buy Now" : "Sales Disabled"}
+            </Button>
+            <Button
+              size="lg"
+              variant="secondary"
+              className="flex-1 gap-2"
+              onClick={() => handleAction("CART")}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Add to Cart
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={() => handleAction("CLICK")}
+            >
+              <MousePointer2 className="h-4 w-4" />
+              Simulate Click
+            </Button>
           </div>
         </div>
       </div>
 
+      {/* Recommendations */}
       {recommendations.length > 0 && (
-        <div style={{ marginTop: "3rem" }}>
-          <h2
-            className="title"
-            style={{ fontSize: "1.5rem", marginBottom: "1.5rem" }}
-          >
-            Recommended for you
-          </h2>
-          <div className="grid">
+        <div className="mt-20">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Recommended for you
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {recommendations.map((rec) => (
-              <div
-                key={rec.id}
-                className="card"
-                onClick={() => router.push(`/products/${rec.id}`)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="card-img" style={{ height: "150px" }}>
-                  {rec.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={rec.imageUrl}
-                      alt={rec.name}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  ) : (
-                    "No Image"
-                  )}
-                </div>
-                <div className="card-body">
-                  <h4 style={{ margin: "0 0 0.5rem 0" }}>{rec.name}</h4>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: "0.9rem",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    <span style={{ color: "#7ee787" }}>
-                      {(rec.price / 100).toFixed(2)} {rec.currency}
-                    </span>
-                    <span style={{ fontWeight: "bold" }}>{rec.score}</span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#8b949e",
-                      fontStyle: "italic",
-                    }}
-                  >
-                    {rec.reason}
-                  </div>
+              // Adapter only, since ProductCard expects Product.
+              // We'll trust the shape is close enough or map it.
+              // Recommendation actually matches mostly Product, except 'reason' and 'score'.
+              // We'll reconstruct a Product object.
+              <div key={rec.id} className="relative group">
+                <ProductCard
+                  product={{
+                    id: rec.id,
+                    name: rec.name,
+                    description: rec.reason, // Use reason as description for context
+                    price: rec.price,
+                    currency: rec.currency,
+                    category: rec.category,
+                    imageUrl: rec.imageUrl,
+                  }}
+                />
+                <div className="absolute top-2 left-2 z-10">
+                  <Badge className="bg-emerald-600 text-white shadow-sm">
+                    Match: {rec.score}%
+                  </Badge>
                 </div>
               </div>
             ))}

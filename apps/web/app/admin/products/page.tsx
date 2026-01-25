@@ -1,6 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Trash2, Plus, X } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -174,178 +187,186 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Manage Products</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Products</h2>
+          <p className="text-muted-foreground">
+            Manage your product inventory.
+          </p>
+        </div>
+        <Button onClick={() => setShowForm(!showForm)}>
+          {showForm ? (
+            <X className="mr-2 h-4 w-4" />
+          ) : (
+            <Plus className="mr-2 h-4 w-4" />
+          )}
           {showForm ? "Cancel" : "Add Product"}
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="p-4 mb-4 bg-red-100 text-red-700 rounded">{error}</div>
+        <div className="p-4 bg-destructive/15 text-destructive rounded-md text-sm font-medium">
+          {error}
+        </div>
       )}
 
       {showForm && (
-        <div className="bg-gray-50 p-6 rounded-lg mb-8 border transition-all">
-          <h2 className="text-lg font-semibold mb-4">New Product</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
-              <input
-                className="w-full p-2 border rounded"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Price (Minor Units)
-              </label>
-              <input
-                type="number"
-                className="w-full p-2 border rounded"
-                value={newPrice}
-                onChange={(e) => setNewPrice(Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Category</label>
-              <select
-                className="w-full p-2 border rounded"
-                value={newCatId}
-                onChange={(e) => setNewCatId(e.target.value)}
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Image</label>
-              <div className="flex gap-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleUpload}
-                  className="p-1 border rounded text-sm w-full"
-                  disabled={uploading}
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="text-lg font-semibold mb-4">New Product Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Product Name"
                 />
               </div>
-              {uploading && (
-                <div className="text-xs text-blue-600 mt-1">Uploading...</div>
-              )}
-              <input
-                className="w-full p-2 border rounded mt-2 text-sm text-gray-500"
-                value={newImage}
-                onChange={(e) => setNewImage(e.target.value)}
-                placeholder="Or paste URL..."
-              />
-              {newImage && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={newImage}
-                  alt="Preview"
-                  className="mt-2 h-20 w-20 object-cover rounded border"
+              <div className="space-y-2">
+                <Label>Price (Cents)</Label>
+                <Input
+                  type="number"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(Number(e.target.value))}
                 />
-              )}
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <select
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={newCatId}
+                  onChange={(e) => setNewCatId(e.target.value)}
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Image</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUpload}
+                    disabled={uploading}
+                    className="file:text-primary"
+                  />
+                </div>
+                {uploading && (
+                  <div className="text-xs text-muted-foreground animate-pulse">
+                    Uploading to R2...
+                  </div>
+                )}
+                <Input
+                  className="mt-2"
+                  value={newImage}
+                  onChange={(e) => setNewImage(e.target.value)}
+                  placeholder="Or paste URL..."
+                />
+                {newImage && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={newImage}
+                    alt="Preview"
+                    className="mt-2 h-20 w-20 object-cover rounded border"
+                  />
+                )}
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <Label>Description</Label>
+                <textarea
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  placeholder="Product details..."
+                />
+              </div>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Description
-              </label>
-              <textarea
-                className="w-full p-2 border rounded"
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-              />
+            <div className="mt-6 flex justify-end">
+              <Button onClick={createProduct}>Save Product</Button>
             </div>
-          </div>
-          <button
-            onClick={createProduct}
-            className="mt-4 bg-green-600 text-white px-6 py-2 rounded"
-          >
-            Save Product
-          </button>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {loading ? (
-        <div>Loading...</div>
+        <div className="py-10 text-center text-muted-foreground">
+          Loading products...
+        </div>
       ) : (
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Price
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {products.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">
-                      {p.name}
-                    </div>
-                    <div className="text-sm text-gray-500 truncate max-w-xs">
+                <TableRow key={p.id}>
+                  <TableCell>
+                    <div className="font-medium">{p.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono">
                       {p.id}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {p.category?.name || "Uncategorized"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {(p.price / 100).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
+                  </TableCell>
+                  <TableCell>{p.category?.name || "Uncategorized"}</TableCell>
+                  <TableCell>${(p.price / 100).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => deleteProduct(p.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="text-destructive hover:bg-destructive/10"
                     >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+              {products.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center h-24 text-muted-foreground"
+                  >
+                    No products found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
 
-      <div className="mt-4 flex justify-between items-center">
-        <button
-          disabled={page <= 1}
+      <div className="flex items-center justify-end space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => fetchProducts(page - 1)}
-          className="px-4 py-2 border rounded disabled:opacity-50"
+          disabled={page <= 1}
         >
           Previous
-        </button>
-        <span>
+        </Button>
+        <div className="text-sm font-medium">
           Page {page} of {totalPages}
-        </span>
-        <button
-          disabled={page >= totalPages}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => fetchProducts(page + 1)}
-          className="px-4 py-2 border rounded disabled:opacity-50"
+          disabled={page >= totalPages}
         >
           Next
-        </button>
+        </Button>
       </div>
     </div>
   );

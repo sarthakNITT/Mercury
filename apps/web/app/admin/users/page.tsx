@@ -1,6 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Plus } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -58,59 +70,76 @@ export default function AdminUsers() {
   };
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">Manage Users</h1>
-
-      <div className="mb-8 flex gap-4">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name"
-          className="p-2 border rounded"
-        />
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="p-2 border rounded"
-        />
-        <button
-          onClick={createUser}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
-        >
-          Create User
-        </button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Users</h2>
+          <p className="text-muted-foreground">Manage platform users.</p>
+        </div>
       </div>
 
-      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <Card>
+        <CardHeader>
+          <CardTitle>Create User</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-end">
+            <div className="grid gap-2 flex-1">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Name"
+              />
+            </div>
+            <div className="grid gap-2 flex-1">
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+            </div>
+            <Button onClick={createUser}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create User
+            </Button>
+          </div>
+          {error && (
+            <div className="text-destructive mt-2 text-sm">{error}</div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                ID
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>ID</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((u) => (
-              <tr key={u.id}>
-                <td className="px-6 py-4 whitespace-nowrap">{u.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <TableRow key={u.id}>
+                <TableCell className="font-medium">{u.name}</TableCell>
+                <TableCell>{u.email}</TableCell>
+                <TableCell className="text-muted-foreground text-xs font-mono">
                   {u.id}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+            {users.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={3}
+                  className="text-center h-24 text-muted-foreground"
+                >
+                  No users found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/components/providers";
+import { AppShell } from "@/components/layout/app-shell";
+import { NextAuthProvider } from "@/components/NextAuthProvider";
 
 export const metadata: Metadata = {
   title: "Mercury Market Force",
   description: "Real-time marketplace intelligence demo",
 };
-
-import Navbar from "../components/Navbar";
-import { NextAuthProvider } from "../components/NextAuthProvider";
 
 export default function RootLayout({
   children,
@@ -15,13 +15,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <NextAuthProvider>
-          <div className="container">
-            <Navbar />
-            <main>{children}</main>
-          </div>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AppShell>{children}</AppShell>
+          </ThemeProvider>
         </NextAuthProvider>
       </body>
     </html>

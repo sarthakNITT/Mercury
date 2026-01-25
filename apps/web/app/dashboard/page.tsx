@@ -2,6 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { api, Metrics, Event, TrendingItem } from "../../lib/api";
+import { MetricCard } from "@/components/dashboard/metric-card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Activity,
+  AlertTriangle,
+  Users,
+  Package,
+  Play,
+  Zap,
+  Database,
+  Flame,
+} from "lucide-react";
+import { Label } from "@/components/ui/label"; // Need Label
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -34,7 +57,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-    // const interval = setInterval(fetchData, 3000); // Remove polling in favor of SSE
 
     // SSE Subscription
     const eventSource = new EventSource(
@@ -47,46 +69,34 @@ export default function Dashboard() {
     };
 
     eventSource.onmessage = () => {
-      // Just refresh data on event
-      // In a real app we'd append to state, but for this hackathon speed, re-fetching is safer/easier
-      // to ensure sync with DB state
       fetchData();
     };
 
     eventSource.onerror = () => {
       setLiveConnected(false);
       eventSource.close();
-      // Simple reconnect logic implicitly handled by useEffect if we wanted,
-      // but let's just leave it closed or retry on reload for simplicity,
-      // or actually valid SSE clients reconnect automatically usually.
-      // Browser implementation reconnects automatically.
     };
 
     return () => {
       eventSource.close();
-      // clearInterval(interval);
     };
   }, []);
 
   const handleDemoStory = async () => {
     setGenerating(true);
-    if (judgesMode) {
-      // Fast mode for judges
-      try {
+    try {
+      if (judgesMode) {
         await api.runDemoStory("fast");
         alert("30s Demo Story Started! Watch the dashboard.");
-      } catch {
-        alert("Error starting demo");
-      }
-    } else {
-      try {
+      } else {
         await api.runDemoStory("normal");
         alert("Demo Story Started!");
-      } catch {
-        alert("Error starting demo");
       }
+    } catch {
+      alert("Error starting demo");
+    } finally {
+      setGenerating(false);
     }
-    setGenerating(false);
   };
 
   const handleSeed = async () => {
@@ -117,297 +127,317 @@ export default function Dashboard() {
   };
 
   if (loading && !metrics)
-    return <div className="container">Loading dashboard...</div>;
+    return <div className="container py-10">Loading dashboard...</div>;
 
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "2rem",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <h1 className="title" style={{ fontSize: "2rem", marginBottom: 0 }}>
+    <div className="container py-8 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">
             {judgesMode ? "Mercury Intelligence" : "Live Dashboard"}
           </h1>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              background: liveConnected
-                ? "rgba(50, 255, 100, 0.1)"
-                : "rgba(255, 50, 50, 0.1)",
-              padding: "0.25rem 0.75rem",
-              borderRadius: "20px",
-              border: `1px solid ${liveConnected ? "#7ee787" : "#da3633"}`,
-            }}
+          <Badge
+            variant={liveConnected ? "default" : "destructive"}
+            className={liveConnected ? "bg-green-500 hover:bg-green-600" : ""}
           >
-            <div
-              style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                backgroundColor: liveConnected ? "#7ee787" : "#da3633",
-                boxShadow: liveConnected ? "0 0 8px #7ee787" : "none",
-              }}
-            ></div>
-            <span
-              style={{
-                fontSize: "0.8rem",
-                color: liveConnected ? "#7ee787" : "#da3633",
-                fontWeight: "bold",
-              }}
-            >
-              {liveConnected ? "LIVE" : "OFFLINE"}
-            </span>
-          </div>
+            {liveConnected ? (
+              <span className="flex items-center gap-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                </span>
+                LIVE
+              </span>
+            ) : (
+              "OFFLINE"
+            )}
+          </Badge>
         </div>
 
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              cursor: "pointer",
-              marginRight: "1rem",
-            }}
-          >
+        <div className="flex items-center gap-2 md:gap-4 flex-wrap">
+          <div className="flex items-center space-x-2 mr-2">
             <input
               type="checkbox"
+              id="judges-mode"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               checked={judgesMode}
               onChange={(e) => setJudgesMode(e.target.checked)}
             />
-            <span style={{ fontWeight: "bold" }}>Judges Mode</span>
-          </label>
+            <Label htmlFor="judges-mode" className="font-medium cursor-pointer">
+              Judges Mode
+            </Label>
+          </div>
 
           {!judgesMode && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleSeed}
               disabled={generating}
-              className="btn btn-outline"
             >
-              Seed Database
-            </button>
+              <Database className="mr-2 h-4 w-4" /> Seed DB
+            </Button>
           )}
 
-          <button
+          <Button
             onClick={handleDemoStory}
             disabled={generating}
-            className="btn"
-            style={{ backgroundColor: "#a371f7", color: "white" }}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            {generating ? "Running..." : "Run 30s Demo Story"}
-          </button>
+            <Play className="mr-2 h-4 w-4" />
+            {generating ? "Running..." : "Run Demo Story"}
+          </Button>
 
           {!judgesMode && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleGenerateValues}
               disabled={generating}
-              className="btn"
             >
-              Gen 50 Events
-            </button>
+              <Zap className="mr-2 h-4 w-4" /> Gen 50 Events
+            </Button>
           )}
         </div>
       </div>
 
+      {/* Metrics Row */}
       {metrics && (
-        <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-label">Total Events</div>
-            <div className="stat-value" style={{ color: "#58a6ff" }}>
-              {metrics.totalEvents}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Total Products</div>
-            <div className="stat-value" style={{ color: "#7ee787" }}>
-              {metrics.totalProducts}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Active Users</div>
-            <div className="stat-value" style={{ color: "#d29922" }}>
-              {metrics.totalUsers}
-            </div>
-          </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Total Events"
+            value={metrics.totalEvents}
+            icon={<Activity className="h-4 w-4" />}
+            className="border-l-4 border-l-blue-500"
+          />
+          <MetricCard
+            title="Total Products"
+            value={metrics.totalProducts}
+            icon={<Package className="h-4 w-4" />}
+            className="border-l-4 border-l-green-500"
+          />
+          <MetricCard
+            title="Active Users"
+            value={metrics.totalUsers}
+            icon={<Users className="h-4 w-4" />}
+            className="border-l-4 border-l-amber-500"
+          />
+          {metrics.fraud && (
+            <MetricCard
+              title="Avg Risk Score"
+              value={metrics.fraud.avgRiskScore.toFixed(1)}
+              icon={<AlertTriangle className="h-4 w-4" />}
+              className="border-l-4 border-l-red-500"
+            />
+          )}
         </div>
       )}
 
-      {metrics && metrics.fraud && (
-        <div className="stats-grid" style={{ marginTop: "1rem" }}>
-          <div className="stat-card" style={{ borderColor: "#da3633" }}>
-            <div className="stat-label" style={{ color: "#da3633" }}>
-              Blocked Txns
-            </div>
-            <div className="stat-value">{metrics.fraud.blockedCount}</div>
-          </div>
-          <div className="stat-card" style={{ borderColor: "#d29922" }}>
-            <div className="stat-label" style={{ color: "#d29922" }}>
-              Challenged
-            </div>
-            <div className="stat-value">{metrics.fraud.challengeCount}</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Avg Risk Score</div>
-            <div className="stat-value">
-              {metrics.fraud.avgRiskScore.toFixed(1)}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Fraud & Breakdown Row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Global Activity Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {metrics && metrics.breakdown && (
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(metrics.breakdown).map(([type, count]) => (
+                  <Badge
+                    key={type}
+                    variant="secondary"
+                    className="text-sm px-3 py-1"
+                  >
+                    {type}: {count}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {metrics && metrics.breakdown && (
-        <div
-          style={{
-            marginBottom: "2rem",
-            display: "flex",
-            gap: "1rem",
-            flexWrap: "wrap",
-          }}
-        >
-          {Object.entries(metrics.breakdown).map(([type, count]) => (
-            <div
-              key={type}
-              className="tag"
-              style={{
-                fontSize: "1rem",
-                padding: "0.5rem 1rem",
-                background: "var(--card-bg)",
-                border: "1px solid var(--border-color)",
-              }}
-            >
-              {type}: <strong>{count}</strong>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <h2 className="title">Trending Now (24h)</h2>
-      <div className="grid" style={{ marginBottom: "2rem" }}>
-        {trending.map((item) => (
-          <div
-            key={item.product.id}
-            className="card"
-            style={{ padding: "1rem" }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <strong style={{ fontSize: "1.1rem" }}>
-                {item.product.name}
-              </strong>
-              <span
-                className="tag"
-                style={{ background: "#d29922", color: "white" }}
-              >
-                {item.score.toFixed(0)} pts
-              </span>
-            </div>
-            <div style={{ color: "#7ee787", fontWeight: "bold" }}>
-              {(item.product.price / 100).toFixed(2)} {item.product.currency}
-            </div>
-          </div>
-        ))}
-        {trending.length === 0 && (
-          <div style={{ color: "grey" }}>No trending data yet.</div>
+        {metrics && metrics.fraud && (
+          <Card className="col-span-3 border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20">
+            <CardHeader>
+              <CardTitle className="text-red-600 dark:text-red-400">
+                Risk Engine Stats
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex justify-around text-center">
+              <div>
+                <div className="text-3xl font-bold text-red-600">
+                  {metrics.fraud.blockedCount}
+                </div>
+                <div className="text-xs text-muted-foreground uppercase">
+                  Blocked
+                </div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-amber-600">
+                  {metrics.fraud.challengeCount}
+                </div>
+                <div className="text-xs text-muted-foreground uppercase">
+                  Challenged
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      <h2 className="title">Recent Activity (Live)</h2>
-      <div className="card">
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Type</th>
-              <th>User</th>
-              <th>Product</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((event) => (
-              <tr key={event.id}>
-                <td style={{ color: "#8b949e", fontSize: "0.9rem" }}>
-                  {new Date(event.createdAt).toLocaleTimeString()}
-                </td>
-                <td>
-                  <span className={`tag tag-${event.type}`}>{event.type}</span>
-                </td>
-                <td>{event.user?.name || "Unknown"}</td>
-                <td>{event.product?.name || "Unknown"}</td>
-              </tr>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Recent Activity Table */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Recent Activity (Live)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Time</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Product</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.slice(0, 10).map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {new Date(event.createdAt).toLocaleTimeString()}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          event.type === "PURCHASE"
+                            ? "bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-300"
+                            : event.type === "BLOCK"
+                              ? "bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-300"
+                              : ""
+                        }
+                      >
+                        {event.type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {event.user?.name || "Unknown"}
+                    </TableCell>
+                    <TableCell className="text-sm truncate max-w-[150px]">
+                      {event.product?.name || "Unknown"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {events.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center text-muted-foreground h-24"
+                    >
+                      No recent events
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Trending Column */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flame className="h-5 w-5 text-amber-500" />
+              Trending Now (24h)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {trending.map((item, index) => (
+              <div
+                key={item.product.id}
+                className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary font-bold text-sm">
+                    #{index + 1}
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm line-clamp-1">
+                      {item.product.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {(item.product.price / 100).toFixed(2)}{" "}
+                      {item.product.currency}
+                    </div>
+                  </div>
+                </div>
+                <Badge className="bg-amber-500">{item.score.toFixed(0)}</Badge>
+              </div>
             ))}
-            {events.length === 0 && (
-              <tr>
-                <td colSpan={4} style={{ textAlign: "center" }}>
-                  No events yet
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </CardContent>
+        </Card>
       </div>
 
-      <h2 className="title" style={{ marginTop: "2rem", color: "#da3633" }}>
-        Fraud Feed (High Risk)
-      </h2>
-      <div className="card" style={{ borderColor: "#da3633" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>User</th>
-              <th>Product</th>
-              <th>Risk</th>
-              <th>Decision</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {fraudEvents.map((event: any) => (
-              <tr key={event.id}>
-                <td style={{ color: "#8b949e", fontSize: "0.9rem" }}>
-                  {new Date(event.createdAt).toLocaleTimeString()}
-                </td>
-                <td>{event.user?.name || "Unknown"}</td>
-                <td>{event.product?.name || "Unknown"}</td>
-                <td style={{ fontWeight: "bold" }}>{event.meta?.riskScore}</td>
-                <td>
-                  <span
-                    className="tag"
-                    style={{
-                      backgroundColor:
+      {/* Fraud Feed */}
+      <Card className="border-red-200 dark:border-red-900">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+            <AlertTriangle className="h-5 w-5" />
+            Fraud Feed (High Risk)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Risk Score</TableHead>
+                <TableHead>Decision</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {fraudEvents.map((event: any) => (
+                <TableRow key={event.id}>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {new Date(event.createdAt).toLocaleTimeString()}
+                  </TableCell>
+                  <TableCell>{event.user?.name || "Unknown"}</TableCell>
+                  <TableCell>{event.product?.name || "Unknown"}</TableCell>
+                  <TableCell className="font-bold text-red-500">
+                    {event.meta?.riskScore}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
                         event.meta?.decision === "BLOCK"
-                          ? "#da3633"
-                          : "#d29922",
-                      color: "white",
-                    }}
+                          ? "destructive"
+                          : "secondary"
+                      }
+                    >
+                      {event.meta?.decision}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {fraudEvents.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="text-center text-muted-foreground h-24"
                   >
-                    {event.meta?.decision}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            {fraudEvents.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ textAlign: "center" }}>
-                  No suspicious activity detected
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    No suspicious activity detected
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
