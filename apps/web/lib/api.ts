@@ -15,7 +15,7 @@ export interface Product {
   description: string;
   price: number;
   currency: string;
-  category: string;
+  category: { id: string; name: string };
   imageUrl?: string;
 }
 
@@ -44,7 +44,7 @@ export interface Recommendation {
   name: string;
   price: number;
   currency: string;
-  category: string;
+  category: { id: string; name: string };
   imageUrl?: string;
   score: number;
   reason: string;

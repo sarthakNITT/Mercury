@@ -219,7 +219,7 @@ export default function ProductPage({
                 variant="secondary"
                 className="px-3 py-1 text-sm font-medium"
               >
-                {product.category}
+                {product.category.name}
               </Badge>
               {trendingScore && (
                 <span className="text-xs font-mono text-muted-foreground">

@@ -252,7 +252,10 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
   }
 
   const [candidates, recentEvents, userHistory] = await Promise.all([
-    prisma.product.findMany({ where: { id: { not: productId } } }),
+    prisma.product.findMany({
+      where: { id: { not: productId } },
+      include: { category: true },
+    }),
     prisma.event.findMany({
       where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
     }),
@@ -358,7 +361,7 @@ fastify.get("/recommendations/:productId", async (request, reply) => {
     name: p.name,
     price: p.price,
     currency: p.currency,
-    categoryId: p.categoryId,
+    category: { id: p.category.id, name: p.category.name },
     imageUrl: p.imageUrl,
     score: parseFloat(p.score.toFixed(2)),
     reason: p.reasons.join(", ") || "Popular",

@@ -54,7 +54,7 @@ export function ProductCard({ product }: ProductCardProps) {
               className="shadow-sm backdrop-blur-md bg-black/60 border-white/10 text-white"
               variant="outline"
             >
-              {product.category}
+              {product.category.name}
             </Badge>
           </div>
 
