@@ -199,6 +199,10 @@ fastify.addHook("preHandler", async (request, reply) => {
     } else if (url === "/events") {
       const result = EventBodySchema.safeParse(request.body);
       if (!result.success) {
+        console.error(
+          "Event Validation Failed:",
+          JSON.stringify(result.error.issues, null, 2),
+        );
         reply.code(400).send({
           ok: false,
           error: "VALIDATION_ERROR",
@@ -276,12 +280,21 @@ registerProxy(fastify, {
 });
 
 // 2. Events Service (SSE)
+// 2. Events Service
+// SSE Stream
+registerProxy(fastify, {
+  upstream: SERVICES.events,
+  prefix: "/events/stream",
+  rewritePrefix: "/events/stream",
+  isSSE: true,
+});
+
+// REST API
 registerProxy(fastify, {
   upstream: SERVICES.events,
   prefix: "/events",
   rewritePrefix: "/events",
-  isSSE: true, // Handles /events/stream
-  // No timeout for SSE
+  proxyOptions: { proxyPayloads: false },
 });
 
 // 3. Reco Service
