@@ -17,7 +17,7 @@ export default function Promote() {
       });
       if (res.ok) setStatus("Success! Sign out and sign in again.");
       else setStatus("Failed");
-    } catch (e) {
+    } catch {
       setStatus("Error");
     }
   };
